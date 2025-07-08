@@ -12,6 +12,10 @@ const RespuestaPostulacionModel = require('./RespuestaPostulacion');
 const CategoriaModel = require('./Categoria');
 const BlogPostModel = require('./BlogPost');
 const ComentarioModel = require('./Comentario');
+const BlogPostMedia = require('./BlogPostMedia')(sequelize);
+const BlogPostReaction = require('./BlogPostReaction')(sequelize);
+const ComentarioMedia = require('./ComentarioMedia')(sequelize);
+const ComentarioReaction = require('./ComentarioReaction')(sequelize);
 
 // Inicialización
 const Usuario = UsuarioModel(sequelize);
@@ -58,11 +62,32 @@ PreguntaOferta.hasMany(RespuestaPostulacion, { foreignKey: 'preguntaOfertaId' })
 RespuestaPostulacion.belongsTo(PreguntaOferta, { foreignKey: 'preguntaOfertaId' });
 
 // Relaciones del blog
-Categoria.hasMany(BlogPost, { foreignKey: 'categoriaId' });
+Categoria.hasMany(BlogPost, { foreignKey: 'categoriaId', onDelete: 'CASCADE' });
 BlogPost.belongsTo(Categoria, { foreignKey: 'categoriaId' });
 
-BlogPost.hasMany(Comentario, { foreignKey: 'postId' });
-Comentario.belongsTo(BlogPost, { foreignKey: 'postId' });
+// BlogPost y Multimedia
+BlogPost.hasMany(BlogPostMedia, { foreignKey: 'blogPostId', onDelete: 'CASCADE' });
+BlogPostMedia.belongsTo(BlogPost, { foreignKey: 'blogPostId' });
+
+// BlogPost y Reacciones
+BlogPost.hasMany(BlogPostReaction, { foreignKey: 'blogPostId', onDelete: 'CASCADE' });
+BlogPostReaction.belongsTo(BlogPost, { foreignKey: 'blogPostId' });
+
+// BlogPost y Comentarios
+BlogPost.hasMany(Comentario, { foreignKey: 'blogPostId', onDelete: 'CASCADE' });
+Comentario.belongsTo(BlogPost, { foreignKey: 'blogPostId' });
+
+// Comentario y Multimedia
+Comentario.hasMany(ComentarioMedia, { foreignKey: 'comentarioId', onDelete: 'CASCADE' });
+ComentarioMedia.belongsTo(Comentario, { foreignKey: 'comentarioId' });
+
+// Comentario y Reacciones
+Comentario.hasMany(ComentarioReaction, { foreignKey: 'comentarioId', onDelete: 'CASCADE' });
+ComentarioReaction.belongsTo(Comentario, { foreignKey: 'comentarioId' });
+
+// Comentarios anidados (respuestas)
+Comentario.hasMany(Comentario, { as: 'respuestas', foreignKey: 'parentId', onDelete: 'CASCADE' });
+Comentario.belongsTo(Comentario, { as: 'padre', foreignKey: 'parentId' });
 
 module.exports = {
   sequelize,
@@ -76,5 +101,9 @@ module.exports = {
   RespuestaPostulacion,
   Categoria,
   BlogPost,
-  Comentario
+  Comentario,
+  BlogPostMedia,
+  BlogPostReaction,
+  ComentarioMedia,
+  ComentarioReaction
 };

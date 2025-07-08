@@ -1,15 +1,14 @@
-module.exports = (sequelize) => {
-  const { DataTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
 
+module.exports = (sequelize) => {
   return sequelize.define('BlogPost', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     titulo: { type: DataTypes.STRING, allowNull: false },
     contenido: { type: DataTypes.TEXT, allowNull: false },
-    publicado: { type: DataTypes.BOOLEAN, defaultValue: true },
-    categoriaId: { type: DataTypes.INTEGER, allowNull: false }, // FK a Categoria
-    imagen_destacada: {
-      type: DataTypes.STRING,
-      allowNull: true,
-      comment: 'URL de imagen destacada en Cloudinary'
-    }
+    autorId: { type: DataTypes.INTEGER, allowNull: false },
+    autorTipo: { type: DataTypes.ENUM('usuario', 'empresa'), allowNull: false },
+    compartidos: { type: DataTypes.INTEGER, defaultValue: 0 },
+    createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
   });
 };

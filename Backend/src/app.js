@@ -22,4 +22,11 @@ app.get('/', (req, res) => {
 // Montar rutas
 app.use('/api', apiRoutes);
 
+// Swagger UI
+const swaggerUi = require('swagger-ui-express');
+const fs = require('fs');
+const yaml = require('js-yaml');
+const swaggerDocument = yaml.load(fs.readFileSync(__dirname + '/../swagger/swagger.yaml', 'utf8'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 module.exports = app;
