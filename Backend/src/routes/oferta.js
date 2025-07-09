@@ -11,6 +11,7 @@ router.delete('/:id', verifyToken, requireCompleteProfile, ofertaController.elim
 
 // 🔓 Rutas públicas
 router.get('/', ofertaController.obtenerOfertas);
+router.get('/empresa/:empresaId', verifyToken, ofertaController.obtenerOfertasPorEmpresa);
 router.get('/:id', ofertaController.obtenerOfertaPorId);
 
 module.exports = router;

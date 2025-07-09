@@ -1,38 +1,21 @@
 // src/routes/upload.js
 const express = require('express');
 const router = express.Router();
-const uploadController = require('../controllers/uploadController');
-const { uploadMiddlewares } = require('../services/uploadService');
+const { 
+  upload, 
+  subirArchivo, 
+  subirArchivoPostulacion,
+  obtenerUrlDescarga,
+  descargarArchivo
+} = require('../controllers/uploadController');
 const verifyToken = require('../middlewares/verifyToken');
 
-// Todas las rutas requieren autenticación
-router.use(verifyToken);
+// Rutas públicas para descarga
+router.get('/download/:publicId', descargarArchivo);
+router.get('/url/:publicId', obtenerUrlDescarga);
 
-// Upload de foto de perfil de estudiante
-router.post('/foto-perfil', 
-  uploadMiddlewares.fotosPerfil.single('foto'), 
-  uploadController.uploadFotoPerfil
-);
-
-// Upload de logo de empresa
-router.post('/logo', 
-  uploadMiddlewares.logos.single('logo'), 
-  uploadController.uploadLogo
-);
-
-// Upload de CV de estudiante
-router.post('/cv', 
-  uploadMiddlewares.cvs.single('cv'), 
-  uploadController.uploadCV
-);
-
-// Upload de imagen para blog
-router.post('/blog-image', 
-  uploadMiddlewares.blogImages.single('imagen'), 
-  uploadController.uploadBlogImage
-);
-
-// Eliminar archivo por public_id
-router.delete('/:publicId', uploadController.deleteUploadedFile);
+// Rutas protegidas para subida
+router.post('/', verifyToken, upload.single('archivo'), subirArchivo);
+router.post('/postulacion', verifyToken, upload.single('archivo'), subirArchivoPostulacion);
 
 module.exports = router;

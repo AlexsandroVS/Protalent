@@ -14,19 +14,19 @@ module.exports = (sequelize) => {
       comment: 'Texto de la pregunta'
     },
     tipo: {
-      type: DataTypes.ENUM('text', 'number', 'select', 'textarea'),
+      type: DataTypes.ENUM('test', 'abierta'),
       allowNull: false,
-      defaultValue: 'text',
-      comment: 'Tipo de input para la respuesta'
+      defaultValue: 'abierta',
+      comment: 'Tipo de pregunta: test (opciones) o abierta (texto libre)'
     },
     opciones: {
-      type: DataTypes.JSON,
+      type: DataTypes.TEXT,
       allowNull: true,
-      comment: 'Array de opciones para tipo select'
+      comment: 'JSON string con opciones para preguntas tipo test'
     },
     requerida: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
+      defaultValue: true,
       comment: 'Si la pregunta es obligatoria'
     },
     orden: {

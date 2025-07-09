@@ -114,20 +114,20 @@ export default function RegisterForm() {
   } = useForm({
     resolver: zodResolver(getCurrentSchema()),
     mode: 'onChange',
-    defaultValues: {
+    defaultValues: { 
       tipo: 'estudiante',
       rol: 'estudiante',
       anioIngreso: '',
       año_egreso: '',
       telefono: '',
-      nombre: '',
-      email: '',
-      password: '',
-      carrera: '',
-      ruc: '',
-      nombreEmpresa: '',
-      rubro: ''
-    }
+      nombre: '', 
+      email: '', 
+      password: '', 
+      carrera: '', 
+      ruc: '', 
+      nombreEmpresa: '', 
+      rubro: '' 
+    } 
   });
 
   // Actualizar el esquema cuando cambia el rol
@@ -208,8 +208,8 @@ export default function RegisterForm() {
       // Agregar campos específicos según el rol
       if (selectedRole === 'estudiante' || selectedRole === 'egresado') {
         userData = { 
-          ...userData,
-          carrera: data.carrera,
+          ...userData, 
+          carrera: data.carrera, 
           tipo: selectedRole,
           telefono: data.telefono || null
         };
@@ -313,7 +313,7 @@ export default function RegisterForm() {
         </div>
         
         <form 
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit)} 
           className="bg-white/5 border border-[#38bdf8]/20 rounded-2xl p-6 sm:p-8 shadow-2xl transition-all duration-300 backdrop-blur-sm"
         >
           {/* Selector de rol */}
@@ -358,7 +358,7 @@ export default function RegisterForm() {
 
           {/* Campos ocultos para tipo y rol */}
           <input type="hidden" {...register('tipo')} value={selectedRole === 'empresa' ? '' : selectedRole} />
-          <input 
+              <input
             type="hidden" 
             {...register('rol')} 
             value={selectedRole} 

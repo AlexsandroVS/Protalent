@@ -43,6 +43,7 @@ const register = async (req, res) => {
         usuarioId: user.id,
         carrera,
         tipo: tipo || rol, // usar el tipo proporcionado o el rol como fallback
+        anio_egreso: req.body.anio_egreso
       });
     } else if (rol === 'empresa') {
       perfil = await Empresa.create({
@@ -130,12 +131,12 @@ const perfil = async (req, res) => {
         {
           model: Estudiante,
           required: false,
-          attributes: ['id', 'carrera', 'año_egreso', 'telefono', 'tipo', 'cv', 'foto_perfil']
+          attributes: ['id', 'carrera', 'anio_egreso', 'telefono', 'tipo', 'cv', 'foto_perfil']
         },
         {
           model: Empresa,
           required: false,
-          attributes: ['id', 'ruc', 'nombre_empresa', 'rubro', 'descripcion', 'direccion', 'telefono']
+          attributes: ['id', 'ruc', 'nombreEmpresa', 'rubro', 'descripcion', 'direccion', 'telefono']
         }
       ]
     });
@@ -326,7 +327,7 @@ const completarPerfilEmpresa = async (req, res) => {
     const empresa = await Empresa.create({
       usuarioId,
       ruc,
-      nombreEmpresa: nombreEmpresaFinal,
+      nombreEmpresa: nombre_empresa,
       rubro,
       descripcion,
       direccion,
@@ -356,12 +357,12 @@ const verificarEstadoPerfil = async (req, res) => {
         {
           model: Estudiante,
           required: false,
-          attributes: ['id', 'carrera', 'año_egreso', 'telefono', 'tipo', 'cv', 'foto_perfil']
+          attributes: ['id', 'carrera', 'anio_egreso', 'telefono', 'tipo', 'cv', 'foto_perfil']
         },
         {
           model: Empresa,
           required: false,
-          attributes: ['id', 'ruc', 'nombre_empresa', 'rubro', 'descripcion', 'direccion', 'telefono']
+          attributes: ['id', 'ruc', 'nombreEmpresa', 'rubro', 'descripcion', 'direccion', 'telefono']
         }
       ]
     });

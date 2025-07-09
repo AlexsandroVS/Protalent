@@ -18,15 +18,15 @@ const studentAlumniCompleteProfileSchema = z.object({
   carrera: z.string().min(3, 'La carrera es obligatoria'),
   tipo: z.enum(['estudiante', 'egresado'], { message: 'El tipo es obligatorio' }),
   telefono: z.string().optional(),
-  año_egreso: z.number().int().min(1900, 'Año de egreso inválido').max(new Date().getFullYear(), 'El año no puede ser en el futuro').optional()
+  anio_egreso: z.number().int().min(1900, 'Año de egreso inválido').max(new Date().getFullYear(), 'El año no puede ser en el futuro').optional()
 }).refine(data => {
   if (data.tipo === 'egresado') {
-    return data.año_egreso !== undefined && data.año_egreso !== null;
+    return data.anio_egreso !== undefined && data.anio_egreso !== null;
   }
   return true;
 }, {
   message: 'El año de egreso es obligatorio para egresados',
-  path: ['año_egreso']
+  path: ['anio_egreso']
 });
 
 const companyCompleteProfileSchema = z.object({
@@ -74,7 +74,7 @@ export default function CompleteProfilePage() {
       if (selectedProfileType === 'empresa') {
         await api.post('/api/auth/completar-perfil-empresa', data);
       } else if (selectedProfileType === 'estudiante' || selectedProfileType === 'egresado') {
-        await api.post('/api/auth/completar-perfil-estudiante', { ...data, rol: data.tipo });
+        await api.post('/api/auth/completar-perfil-estudiante', { ...data, rol: data.tipo, anio_egreso: data.anio_egreso });
       }
       // Después de completar el perfil, forzar una recarga del contexto para obtener el usuario actualizado
       // Opcional: Podríamos re-llamar a initializeAuth o simplemente redirigir al dashboard
@@ -178,16 +178,16 @@ export default function CompleteProfilePage() {
                     <div className="relative">
                       <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
-                        {...register('año_egreso', { valueAsNumber: true })}
+                        {...register('anio_egreso', { valueAsNumber: true })}
                         type="number"
                         className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                          errors.año_egreso ? 'border-red-500' : 'border-[#38bdf8]/30'
+                          errors.anio_egreso ? 'border-red-500' : 'border-[#38bdf8]/30'
                         }`}
                         placeholder="Ej: 2023"
                       />
                     </div>
-                    {errors.año_egreso && (
-                      <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.año_egreso.message}</p>
+                    {errors.anio_egreso && (
+                      <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.anio_egreso.message}</p>
                     )}
                   </div>
                 )}

@@ -1,7 +1,8 @@
 //src/middlewares/verifyToken
 const jwt = require('jsonwebtoken');
+const { Usuario, Estudiante, Empresa } = require('../models');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -12,7 +13,29 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // ahora tienes acceso a req.user en rutas protegidas
+    
+    // Cargar información completa del usuario con sus relaciones
+    const user = await Usuario.findByPk(decoded.id, {
+      attributes: ['id', 'nombre', 'email', 'rol', 'perfilCompleto'],
+      include: [
+        {
+          model: Estudiante,
+          required: false,
+          attributes: ['id', 'carrera', 'anio_egreso', 'telefono', 'tipo', 'cv', 'foto_perfil']
+        },
+        {
+          model: Empresa,
+          required: false,
+          attributes: ['id', 'ruc', 'nombreEmpresa', 'rubro', 'descripcion', 'direccion', 'telefono']
+        }
+      ]
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    req.user = user; // Ahora tienes acceso a req.user con toda la información
     next();
   } catch (err) {
     return res.status(403).json({ error: 'Token inválido o expirado' });

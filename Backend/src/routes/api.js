@@ -21,6 +21,7 @@ const blogPostRoutes = require('./blogPost');
 const comentarioRoutes = require('./comentario');
 const uploadRoutes = require('./upload');
 const chatRoutes = require('./chat');
+const ubicacionRoutes = require('./ubicacion');
 
 router.get('/', saludo);
 router.use('/auth', authRoutes); 
@@ -41,5 +42,6 @@ router.use('/posts', blogPostRoutes);
 router.use('/comentarios', comentarioRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/chat', chatRoutes);
+router.use('/ubicaciones', ubicacionRoutes);
 
 module.exports = router;

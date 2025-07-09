@@ -29,7 +29,7 @@ const crearEstudiante = async (req, res) => {
     const estudiante = await Estudiante.create({
       usuarioId,
       carrera,
-      año_egreso: anioEgreso,
+      anio_egreso,
       telefono,
       tipo: tipo || 'estudiante', // Valor por defecto
       direccion: direccion || ''
@@ -114,7 +114,7 @@ const actualizarEstudiante = async (req, res) => {
 
     await estudiante.update({
       carrera,
-      año_egreso,
+      anio_egreso: año_egreso,
       telefono,
       tipo,
       cv,

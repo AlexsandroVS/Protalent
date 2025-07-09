@@ -16,6 +16,24 @@ export default function OfertasPage() {
   const [viewMode, setViewMode] = useState('grid');
   const router = useRouter();
 
+  // Función para formatear la ubicación
+  const formatUbicacion = (oferta) => {
+    // Usar los nombres de ubicación si están disponibles
+    if (oferta.ubicacionNombres) {
+      return oferta.ubicacionNombres.completo;
+    }
+    
+    // Fallback a los códigos si no hay nombres
+    if (oferta.departamento && oferta.provincia && oferta.distrito) {
+      return `${oferta.departamento}, ${oferta.provincia}, ${oferta.distrito}`;
+    } else if (oferta.departamento && oferta.provincia) {
+      return `${oferta.departamento}, ${oferta.provincia}`;
+    } else if (oferta.departamento) {
+      return oferta.departamento;
+    }
+    return 'Ubicación no especificada';
+  };
+
   useEffect(() => {
     fetchOfertas();
   }, []);
@@ -28,7 +46,7 @@ export default function OfertasPage() {
         image: oferta.imagen || `https://via.placeholder.com/900x900.png?text=${encodeURIComponent(oferta.titulo)}`,
         link: `/dashboard/postulaciones/crear/${oferta.id}`,
         title: oferta.titulo,
-        description: `${oferta.empresa || 'Empresa'} • ${oferta.ubicacion || 'Ubicación'}`,
+        description: `${oferta.Empresa?.nombreEmpresa || 'Empresa'} • ${oferta.modalidad || 'Modalidad'} • ${formatUbicacion(oferta)}`,
         ofertaData: oferta // Guardar datos completos para referencia
       }));
       
@@ -163,8 +181,13 @@ export default function OfertasPage() {
                         <span className="text-sm bg-white/10 px-3 py-1 rounded-full text-white/70">
                           {oferta.ofertaData?.modalidad || 'Modalidad no especificada'}
                         </span>
+                        {oferta.ofertaData?.salario && (
+                          <span className="text-sm bg-green-500/20 px-3 py-1 rounded-full text-green-300">
+                            {oferta.ofertaData.salario}
+                          </span>
+                        )}
                         <span className="text-sm text-gray-300">
-                          {oferta.ofertaData?.duracion || 'Duración no especificada'}
+                          {formatUbicacion(oferta.ofertaData)}
                         </span>
                       </div>
                     </div>

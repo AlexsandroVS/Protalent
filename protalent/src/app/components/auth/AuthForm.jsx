@@ -23,15 +23,15 @@ const studentAlumniSchema = baseRegisterSchema.extend({
   carrera: z.string().min(3, 'La carrera es obligatoria'),
   tipo: z.enum(['estudiante', 'egresado'], { message: 'El tipo es obligatorio' }),
   telefono: z.string().optional(),
-  año_egreso: z.number().int().min(1900, 'Año de egreso inválido').max(new Date().getFullYear(), 'El año no puede ser en el futuro').optional()
+  anio_egreso: z.number().int().min(1900, 'Año de egreso inválido').max(new Date().getFullYear(), 'El año no puede ser en el futuro').optional()
 }).refine(data => {
   if (data.tipo === 'egresado') {
-    return data.año_egreso !== undefined && data.año_egreso !== null;
+    return data.anio_egreso !== undefined && data.anio_egreso !== null;
   }
   return true;
 }, {
   message: 'El año de egreso es obligatorio para egresados',
-  path: ['año_egreso']
+  path: ['anio_egreso']
 });
 
 const companySchema = baseRegisterSchema.extend({
@@ -65,7 +65,7 @@ export default function AuthForm({ type }) {
       carrera: '', 
       tipo: 'estudiante', // Se inicializa como estudiante
       telefono: '', 
-      año_egreso: null, 
+      anio_egreso: null, 
       ruc: '', 
       nombre_empresa: '', 
       rubro: '' 
@@ -82,7 +82,7 @@ export default function AuthForm({ type }) {
       carrera: '',
       tipo: (selectedRole === 'estudiante' || selectedRole === 'egresado') ? selectedRole : '',
       telefono: '',
-      año_egreso: null,
+      anio_egreso: null,
       ruc: '',
       nombre_empresa: '',
       rubro: ''
@@ -115,7 +115,7 @@ export default function AuthForm({ type }) {
             telefono: data.telefono || null
           };
           if (selectedRole === 'egresado') {
-            userData.año_egreso = parseInt(data.año_egreso);
+            userData.anio_egreso = parseInt(data.anio_egreso);
           }
         } else if (selectedRole === 'empresa') {
           userData = { 
@@ -270,7 +270,7 @@ export default function AuthForm({ type }) {
                   carrera: '', 
                   tipo: 'estudiante', 
                   telefono: '', 
-                  año_egreso: null, 
+                  anio_egreso: null, 
                   ruc: '', 
                   nombre_empresa: '', 
                   rubro: '' 
@@ -297,7 +297,7 @@ export default function AuthForm({ type }) {
                   carrera: '', 
                   tipo: '', 
                   telefono: '', 
-                  año_egreso: null, 
+                  anio_egreso: null, 
                   ruc: '', 
                   nombre_empresa: '', 
                   rubro: '' 
@@ -402,21 +402,21 @@ export default function AuthForm({ type }) {
 
             {selectedRole === 'egresado' && (
               <div className="mb-6">
-                <label htmlFor="año_egreso" className="block text-sm font-medium mb-2 text-gray-300">Año de Egreso</label>
+                <label htmlFor="anio_egreso" className="block text-sm font-medium mb-2 text-gray-300">Año de Egreso</label>
                 <div className="relative">
                   <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
-                    id="año_egreso"
-                    {...register('año_egreso', { valueAsNumber: true })}
+                    id="anio_egreso"
+                    {...register('anio_egreso', { valueAsNumber: true })}
                     type="number"
                     className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                      errors.año_egreso ? 'border-red-500' : 'border-[#38bdf8]/30'
+                      errors.anio_egreso ? 'border-red-500' : 'border-[#38bdf8]/30'
                     }`}
                     placeholder="Ej: 2023"
                   />
                 </div>
-                {errors.año_egreso && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.año_egreso.message}</p>
+                {errors.anio_egreso && (
+                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.anio_egreso.message}</p>
                 )}
               </div>
             )}

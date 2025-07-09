@@ -3,119 +3,110 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiBriefcase, FiPlus, FiSearch, FiFilter, FiEdit2, FiTrash2, FiEye, FiClock, FiCheckCircle, FiXCircle, FiUsers, FiDollarSign } from 'react-icons/fi';
+import { useAuth } from '../../../context/auth/AuthContext';
+import api from '../../../lib/axios';
 
 export default function OfertasPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [ofertas, setOfertas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     estado: 'todos',
-    tipo: 'todos',
+    modalidad: 'todos',
     fecha: 'todos',
   });
 
-  // Datos simulados
+  // Obtener ofertas de la empresa logueada
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setOfertas([
-        {
-          id: 1,
-          titulo: 'Desarrollador Frontend',
-          empresa: 'Tech Solutions S.A.',
-          ubicacion: 'Remoto',
-          tipo: 'Tiempo Completo',
-          salario: 'S/ 3,500 - 4,500',
-          fechaPublicacion: '2023-06-15',
-          fechaCierre: '2023-07-15',
-          estado: 'activa',
-          postulaciones: 15,
-          descripcion: 'Buscamos un desarrollador frontend con experiencia en React y TypeScript.'
-        },
-        {
-          id: 2,
-          titulo: 'Diseñador UX/UI',
-          empresa: 'Digital Creators',
-          ubicacion: 'Lima, Perú',
-          tipo: 'Medio Tiempo',
-          salario: 'S/ 2,500 - 3,500',
-          fechaPublicacion: '2023-06-10',
-          fechaCierre: '2023-07-10',
-          estado: 'activa',
-          postulaciones: 8,
-          descripcion: 'Diseñador con experiencia en herramientas de diseño y prototipado.'
-        },
-        {
-          id: 3,
-          titulo: 'Especialista en Marketing Digital',
-          empresa: 'Growth Marketing',
-          ubicacion: 'Arequipa, Perú',
-          tipo: 'Tiempo Completo',
-          salario: 'S/ 3,000 - 4,000',
-          fechaPublicacion: '2023-06-05',
-          fechaCierre: '2023-07-05',
-          estado: 'cerrada',
-          postulaciones: 22,
-          descripcion: 'Experto en estrategias de marketing digital y redes sociales.'
-        },
-        {
-          id: 4,
-          titulo: 'Desarrollador Backend',
-          empresa: 'Tech Solutions S.A.',
-          ubicacion: 'Remoto',
-          tipo: 'Tiempo Completo',
-          salario: 'S/ 4,000 - 5,500',
-          fechaPublicacion: '2023-06-20',
-          fechaCierre: '2023-07-20',
-          estado: 'activa',
-          postulaciones: 12,
-          descripcion: 'Experiencia en Node.js, MongoDB y arquitectura de microservicios.'
-        },
-        {
-          id: 5,
-          titulo: 'Community Manager',
-          empresa: 'Social Media Pro',
-          ubicacion: 'Lima, Perú',
-          tipo: 'Medio Tiempo',
-          salario: 'S/ 1,800 - 2,500',
-          fechaPublicacion: '2023-05-25',
-          fechaCierre: '2023-06-25',
-          estado: 'cerrada',
-          postulaciones: 18,
-          descripcion: 'Manejo de redes sociales y creación de contenido digital.'
-        },
-      ]);
-      setLoading(false);
-    }, 1000);
+    const fetchOfertas = async () => {
+      try {
+        setLoading(true);
+        
+        // Verificar que el usuario sea una empresa
+        if (!user || user.rol !== 'empresa') {
+          console.error('Usuario no es una empresa:', user);
+          return;
+        }
 
-    return () => clearTimeout(timer);
-  }, []);
+        // Obtener el ID de la empresa del usuario
+        const empresaId = user.Empresa?.id;
+        if (!empresaId) {
+          console.error('No se encontró ID de empresa para el usuario:', user);
+          return;
+        }
+
+        // Obtener ofertas de la empresa
+        const response = await api.get(`/api/ofertas/empresa/${empresaId}`);
+        setOfertas(response.data);
+        
+      } catch (error) {
+        console.error('Error al obtener ofertas:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchOfertas();
+    }
+  }, [user]);
 
   // Filtrar ofertas
   const filteredOfertas = ofertas.filter(oferta => {
-    const matchesSearch = oferta.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        oferta.descripcion.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = oferta.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        oferta.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesFilters = 
       (filters.estado === 'todos' || oferta.estado === filters.estado) &&
-      (filters.tipo === 'todos' || oferta.tipo === filters.tipo);
+      (filters.modalidad === 'todos' || oferta.modalidad === filters.modalidad);
     
     return matchesSearch && matchesFilters;
   });
 
   // Manejar cambio de estado
-  const toggleEstadoOferta = (id) => {
-    setOfertas(ofertas.map(oferta => 
-      oferta.id === id 
-        ? { ...oferta, estado: oferta.estado === 'activa' ? 'cerrada' : 'activa' } 
-        : oferta
-    ));
+  const toggleEstadoOferta = async (id) => {
+    try {
+      const oferta = ofertas.find(o => o.id === id);
+      const nuevoEstado = oferta.estado === 'activa' ? 'cerrada' : 'activa';
+      
+      await api.put(`/api/ofertas/${id}`, { estado: nuevoEstado });
+      
+      setOfertas(ofertas.map(oferta => 
+        oferta.id === id 
+          ? { ...oferta, estado: nuevoEstado } 
+          : oferta
+      ));
+    } catch (error) {
+      console.error('Error al cambiar estado de oferta:', error);
+    }
+  };
+
+  // Eliminar oferta
+  const eliminarOferta = async (id) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar esta oferta?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/api/ofertas/${id}`);
+      setOfertas(ofertas.filter(o => o.id !== id));
+    } catch (error) {
+      console.error('Error al eliminar oferta:', error);
+    }
   };
 
   // Formatear fecha
   const formatDate = (dateString) => {
+    if (!dateString) return 'No especificada';
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('es-ES', options);
+  };
+
+  // Obtener número de postulaciones
+  const getPostulacionesCount = (oferta) => {
+    return oferta.Postulaciones?.length || 0;
   };
 
   if (loading) {
@@ -171,13 +162,13 @@ export default function OfertasPage() {
             <div>
               <select
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md h-10 border"
-                value={filters.tipo}
-                onChange={(e) => setFilters({...filters, tipo: e.target.value})}
+                value={filters.modalidad}
+                onChange={(e) => setFilters({...filters, modalidad: e.target.value})}
               >
-                <option value="todos">Todos los tipos</option>
-                <option value="Tiempo Completo">Tiempo Completo</option>
-                <option value="Medio Tiempo">Medio Tiempo</option>
-                <option value="Práctica">Práctica</option>
+                <option value="todos">Todas las modalidades</option>
+                <option value="presencial">Presencial</option>
+                <option value="remoto">Remoto</option>
+                <option value="híbrido">Híbrido</option>
               </select>
             </div>
           </div>
@@ -197,90 +188,99 @@ export default function OfertasPage() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-blue-600">{oferta.titulo}</div>
-                          <div className="text-sm text-gray-500">{oferta.empresa} • {oferta.ubicacion}</div>
+                          <div className="text-sm text-gray-500">
+                            {oferta.ubicacionNombres?.completo || 'Ubicación no especificada'} • {oferta.modalidad}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {oferta.salario && `Salario: ${oferta.salario}`}
+                          </div>
                         </div>
                       </div>
-                      <div className="ml-2 flex-shrink-0 flex
-                      ">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          oferta.estado === 'activa' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {oferta.estado === 'activa' ? 'Activa' : 'Cerrada'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                          <FiClock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                          Cierra el {formatDate(oferta.fechaCierre)}
+                      
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <FiUsers className="mr-1" />
+                            {getPostulacionesCount(oferta)} postulaciones
+                          </div>
+                          <div className="flex items-center">
+                            <FiClock className="mr-1" />
+                            {formatDate(oferta.createdAt)}
+                          </div>
                         </div>
-                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                          <FiUsers className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                          {oferta.postulaciones} postulaciones
+                        
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            oferta.estado === 'activa' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {oferta.estado === 'activa' ? (
+                              <>
+                                <FiCheckCircle className="mr-1" />
+                                Activa
+                              </>
+                            ) : (
+                              <>
+                                <FiXCircle className="mr-1" />
+                                Cerrada
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => router.push(`/empresas/dashboard/ofertas/${oferta.id}/postulaciones`)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Ver postulaciones"
+                          >
+                            <FiEye className="h-4 w-4" />
+                          </button>
+                          
+                          <button
+                            onClick={() => router.push(`/empresas/dashboard/ofertas/${oferta.id}/editar`)}
+                            className="text-gray-600 hover:text-gray-800"
+                            title="Editar oferta"
+                          >
+                            <FiEdit2 className="h-4 w-4" />
+                          </button>
+                          
+                          <button
+                            onClick={() => toggleEstadoOferta(oferta.id)}
+                            className={`${
+                              oferta.estado === 'activa' 
+                                ? 'text-red-600 hover:text-red-800' 
+                                : 'text-green-600 hover:text-green-800'
+                            }`}
+                            title={oferta.estado === 'activa' ? 'Cerrar oferta' : 'Abrir oferta'}
+                          >
+                            {oferta.estado === 'activa' ? (
+                              <FiXCircle className="h-4 w-4" />
+                            ) : (
+                              <FiCheckCircle className="h-4 w-4" />
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={() => eliminarOferta(oferta.id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Eliminar oferta"
+                          >
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        <FiDollarSign className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
-                        {oferta.salario}
-                      </div>
-                    </div>
-                    <div className="mt-2 flex justify-end space-x-3">
-                      <button
-                        onClick={() => router.push(`/empresas/dashboard/postulaciones?oferta=${oferta.id}`)}
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        Ver Postulaciones
-                      </button>
-                      <button
-                        onClick={() => router.push(`/empresas/dashboard/ofertas/editar/${oferta.id}`)}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <FiEdit2 className="mr-1 h-3 w-3" />
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => toggleEstadoOferta(oferta.id)}
-                        className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          oferta.estado === 'activa'
-                            ? 'text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:ring-yellow-500'
-                            : 'text-green-700 bg-green-100 hover:bg-green-200 focus:ring-green-500'
-                        }`}
-                      >
-                        {oferta.estado === 'activa' ? (
-                          <>
-                            <FiXCircle className="mr-1 h-3 w-3" />
-                            Cerrar
-                          </>
-                        ) : (
-                          <>
-                            <FiCheckCircle className="mr-1 h-3 w-3" />
-                            Reabrir
-                          </>
-                        )}
-                      </button>
                     </div>
                   </div>
                 </li>
               ))
             ) : (
-              <li className="px-4 py-12 text-center">
-                <FiBriefcase className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No se encontraron ofertas</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  No hay ofertas que coincidan con los criterios de búsqueda.
-                </p>
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    onClick={() => router.push('/empresas/dashboard/ofertas/crear')}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <FiPlus className="-ml-1 mr-2 h-5 w-5" />
-                    Nueva Oferta
-                  </button>
+              <li className="px-4 py-8 text-center">
+                <div className="text-gray-500">
+                  <FiBriefcase className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-lg font-medium">No hay ofertas</p>
+                  <p className="text-sm">Crea tu primera oferta para comenzar a recibir postulaciones.</p>
                 </div>
               </li>
             )}
