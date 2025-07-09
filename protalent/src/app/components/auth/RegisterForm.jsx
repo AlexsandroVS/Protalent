@@ -3,95 +3,172 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../../context/auth/AuthContext';
-import { FiMail, FiLock, FiUser, FiBriefcase, FiPhone, FiCalendar, FiTag } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import Link from 'next/link';
 import { cn } from '../../../lib/utils';
+import StudentForm from './StudentForm';
+import AlumniForm from './AlumniForm';
+import CompanyForm from './CompanyForm';
 
+// Esquema base común a todos los roles
 const baseRegisterSchema = z.object({
-  nombre: z.string().min(3, 'Mínimo 3 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Mínimo 6 caracteres'),
+  nombre: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres' }),
+  email: z.string().email({ message: 'Ingresa un correo electrónico válido' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres y contener al menos una letra y un número' }),
+  rol: z.enum(['estudiante', 'egresado', 'empresa'], {
+    required_error: 'Debes seleccionar un rol para continuar con el registro',
+    invalid_type_error: 'Rol no válido, por favor selecciona una opción válida'
+  })
 });
 
-const studentAlumniSchema = baseRegisterSchema.extend({
+const estudianteSchema = baseRegisterSchema.extend({
+  tipo: z.literal('estudiante'),
+  rol: z.literal('estudiante'),
   carrera: z.string().min(3, 'La carrera es obligatoria'),
-  tipo: z.enum(['estudiante', 'egresado'], { message: 'El tipo es obligatorio' }),
-  telefono: z.string().optional(),
-  año_egreso: z.number().int().min(1900, 'Año de egreso inválido')
-    .max(new Date().getFullYear(), 'El año no puede ser en el futuro')
+  anioIngreso: z.coerce
+    .number()
+    .int('Debe ser un número entero')
+    .min(1900, 'Año no válido')
+    .max(new Date().getFullYear(), 'El año no puede ser mayor al actual')
     .optional()
-}).refine(data => {
-  if (data.tipo === 'egresado') {
-    return data.año_egreso !== undefined && data.año_egreso !== null;
-  }
-  return true;
-}, {
-  message: 'El año de egreso es obligatorio para egresados',
-  path: ['año_egreso']
+    .or(z.literal('')),
+  telefono: z.string()
+    .regex(/^[0-9]{9,15}$/, 'Teléfono no válido')
+    .optional()
+    .or(z.literal(''))
 });
 
-const companySchema = baseRegisterSchema.extend({
-  ruc: z.string().min(11, 'RUC debe tener 11 caracteres').max(11, 'RUC debe tener 11 caracteres'),
-  nombreEmpresa: z.string().min(3, 'El nombre de la empresa es obligatorio'),
-  rubro: z.string().min(3, 'El rubro es obligatorio')
+const egresadoSchema = baseRegisterSchema.extend({
+  tipo: z.literal('egresado'),
+  rol: z.literal('egresado').default('egresado'),
+  carrera: z.string().min(3, 'La carrera es obligatoria'),
+  año_egreso: z.coerce
+    .number({
+      required_error: 'Año de egreso es requerido',
+      invalid_type_error: 'Debe ser un año válido'
+    })
+    .int('Debe ser un número entero')
+    .min(1900, 'Año no válido')
+    .max(new Date().getFullYear(), 'El año no puede ser mayor al actual'),
+  telefono: z.string()
+    .regex(/^[0-9]{9,15}$/, 'Teléfono no válido')
+    .optional()
+    .or(z.literal(''))
+});
+
+const empresaSchema = baseRegisterSchema.extend({
+  // Para empresas, el tipo debe ser 'empresa' o vacío
+  tipo: z.union([z.literal('empresa'), z.literal('')])
+    .transform(val => val === '' ? 'empresa' : val)
+    .default('empresa'),
+  
+  rol: z.literal('empresa').default('empresa'),
+  
+  nombreEmpresa: z.string().min(3, { message: 'El nombre de la empresa es obligatorio' }),
+  
+  ruc: z.string()
+    .min(11, { message: 'El RUC debe tener 11 dígitos' })
+    .max(11, { message: 'El RUC no puede tener más de 11 dígitos' })
+    .regex(/^[0-9]+$/, { message: 'El RUC solo puede contener números' }),
+    
+  rubro: z.string().min(3, { message: 'El rubro es obligatorio' }),
+  
+  // Hacer opcionales los campos que no son necesarios para empresas
+  carrera: z.string().optional().default(''),
+  anioIngreso: z.string().optional().default(''),
+  año_egreso: z.string().optional().default(''),
+  telefono: z.string().optional().default('')
 });
 
 export default function RegisterForm() {
   const [selectedRole, setSelectedRole] = useState('estudiante');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const { register: registerUser, registerWithGoogle } = useAuth();
 
   const getCurrentSchema = () => {
-    if (selectedRole === 'empresa') {
-      return companySchema;
-    } else {
-      return studentAlumniSchema;
+    switch (selectedRole) {
+      case 'estudiante':
+        return estudianteSchema;
+      case 'egresado':
+        return egresadoSchema;
+      case 'empresa':
+        return empresaSchema;
+      default:
+        return estudianteSchema;
     }
   };
 
-  const { register, handleSubmit, formState: { errors, touchedFields, isSubmitted }, reset, clearErrors, setValue, watch, trigger } = useForm({
+  // Inicializar el formulario con un esquema básico
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors, touchedFields, isSubmitting }, 
+    watch,
+    setValue,
+    trigger,
+    reset,
+    clearErrors,
+    control,
+    getValues
+  } = useForm({
     resolver: zodResolver(getCurrentSchema()),
-    defaultValues: { 
-      nombre: '', 
-      email: '', 
-      password: '', 
-      carrera: '', 
+    mode: 'onChange',
+    defaultValues: {
       tipo: 'estudiante',
-      telefono: '', 
-      año_egreso: null, 
-      ruc: '', 
-      nombreEmpresa: '', 
-      rubro: '' 
-    } 
+      rol: 'estudiante',
+      anioIngreso: '',
+      año_egreso: '',
+      telefono: '',
+      nombre: '',
+      email: '',
+      password: '',
+      carrera: '',
+      ruc: '',
+      nombreEmpresa: '',
+      rubro: ''
+    }
   });
 
   // Actualizar el esquema cuando cambia el rol
   useEffect(() => {
+    console.log('Rol cambiado a:', selectedRole);
+    
+    // Actualizar el esquema de validación
+    const schema = getCurrentSchema();
+    
     const defaultValues = {
       nombre: '',
       email: '',
       password: '',
       carrera: '',
+      rol: selectedRole, // Asegurar que el rol se actualice
       tipo: selectedRole === 'empresa' ? '' : selectedRole,
       telefono: '',
-      año_egreso: null,
+      anioIngreso: '',
+      año_egreso: '',
       ruc: '',
       nombreEmpresa: '',
       rubro: ''
     };
     
-    // Si es estudiante, forzar el tipo a 'estudiante'
-    if (selectedRole === 'estudiante') {
-      defaultValues.tipo = 'estudiante';
+    // Si es estudiante o egresado, forzar el tipo
+    if (selectedRole === 'estudiante' || selectedRole === 'egresado') {
+      defaultValues.tipo = selectedRole;
     }
     
+    console.log('Valores por defecto:', defaultValues);
+    
+    // Actualizar el formulario con los nuevos valores por defecto
     reset(defaultValues);
-    trigger(); // Disparar validación después de resetear
+    
+    // Forzar la actualización del valor del rol
+    setValue('rol', selectedRole, { shouldValidate: true });
+    
+    // Limpiar errores
     clearErrors();
-  }, [selectedRole, reset, clearErrors, trigger]);
+    
+  }, [selectedRole, reset, clearErrors, setValue]);
   
   // Observar cambios en el tipo para forzar validación
   const currentTipo = watch('tipo');
@@ -109,50 +186,96 @@ export default function RegisterForm() {
   };
 
   const onSubmit = async (data) => {
+    console.log('=== INICIO DE ONSUBMIT ===');
+    console.log('Datos del formulario:', data);
     setSubmitError('');
     setFormSubmitted(true);
-    setIsSubmitting(true);
     
     try {
-      console.log('Datos del formulario:', data); // Para depuración
+      console.log('=== DATOS DEL FORMULARIO CRUDOS ===', data);
+      console.log('Rol seleccionado:', selectedRole);
       
-      // Determinar el rol real basado en el tipo seleccionado
-      const userRole = (selectedRole === 'estudiante' || selectedRole === 'egresado') ? 
-        (data.tipo || selectedRole) : selectedRole;
-      
+      // Preparar los datos según el rol
       let userData = {
         nombre: data.nombre,
         email: data.email,
         password: data.password,
-        rol: userRole, // Usar el rol determinado
+        rol: data.rol || selectedRole,
       };
 
-      if (userRole === 'estudiante' || userRole === 'egresado') {
+      console.log('Datos base del usuario:', userData);
+      
+      // Agregar campos específicos según el rol
+      if (selectedRole === 'estudiante' || selectedRole === 'egresado') {
         userData = { 
-          ...userData, 
-          carrera: data.carrera, 
-          tipo: userRole, // Usar el rol directamente
+          ...userData,
+          carrera: data.carrera,
+          tipo: selectedRole,
           telefono: data.telefono || null
         };
         
-        if (userRole === 'egresado') {
-          userData.año_egreso = data.año_egreso ? parseInt(data.año_egreso) : null;
+        console.log('Datos después de agregar campos de estudiante/egresado:', userData);
+        
+        if (selectedRole === 'estudiante') {
+          console.log('Procesando datos de estudiante...');
+          if (data.anioIngreso) {
+            userData.anioIngreso = parseInt(data.anioIngreso);
+            console.log('Año de ingreso procesado:', userData.anioIngreso);
+          }
         }
-      } else if (userRole === 'empresa') {
+        
+        if (selectedRole === 'egresado' && data.año_egreso) {
+          userData.año_egreso = parseInt(data.año_egreso);
+          console.log('Año de egreso procesado:', userData.año_egreso);
+        }
+      } 
+      
+      if (selectedRole === 'empresa') {
         userData = { 
           ...userData, 
           ruc: data.ruc, 
           nombre_empresa: data.nombreEmpresa, 
           rubro: data.rubro 
         };
+        console.log('Datos de empresa procesados:', userData);
       }
       
-      await registerUser(userData);
+      console.log('=== DATOS FINALES A ENVIAR ===', JSON.stringify(userData, null, 2));
+      
+      // Validar que todos los campos requeridos estén presentes
+      const requiredFields = ['nombre', 'email', 'password', 'rol'];
+      const missingFields = requiredFields.filter(field => !userData[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Faltan campos requeridos: ${missingFields.join(', ')}`);
+      }
+      
+      if (selectedRole === 'estudiante' && !userData.carrera) {
+        throw new Error('La carrera es obligatoria para estudiantes');
+      }
+      
+      console.log('Enviando datos al servidor...');
+      const response = await registerUser(userData);
+      console.log('Respuesta del servidor:', response);
+      
     } catch (error) {
-      console.error('Error en el registro:', error);
-      setSubmitError(error.response?.data?.error || 'Ocurrió un error al procesar el registro');
+      console.error('=== ERROR EN EL REGISTRO ===');
+      console.error('Mensaje de error:', error.message);
+      console.error('Error completo:', error);
+      
+      if (error.response) {
+        console.error('Datos de respuesta del servidor:', error.response.data);
+        console.error('Estado HTTP:', error.response.status);
+        console.error('Cabeceras:', error.response.headers);
+      }
+      
+      setSubmitError(
+        error.response?.data?.error || 
+        error.message || 
+        'Ocurrió un error al procesar el registro. Por favor, inténtalo de nuevo.'
+      );
     } finally {
-      setIsSubmitting(false);
+      console.log('=== FIN DEL PROCESO DE REGISTRO ===');
     }
   };
 
@@ -183,7 +306,7 @@ export default function RegisterForm() {
         </div>
         
         <form 
-          onSubmit={handleSubmit(onSubmit)} 
+          onSubmit={handleSubmit(onSubmit)}
           className="bg-white/5 border border-[#38bdf8]/20 rounded-2xl p-6 sm:p-8 shadow-2xl transition-all duration-300 backdrop-blur-sm"
         >
           {/* Selector de rol */}
@@ -226,231 +349,47 @@ export default function RegisterForm() {
             </button>
           </div>
 
-          {/* Campos comunes */}
-          <div className="mb-6">
-            <label htmlFor="nombre" className="block text-sm font-medium mb-2 text-gray-300">
-              {selectedRole === 'empresa' ? 'Nombre del representante' : 'Nombre completo'}
-            </label>
-            <div className="relative">
-              <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                id="nombre"
-                {...register('nombre')}
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                  shouldShowError('nombre') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                }`}
-                placeholder={selectedRole === 'empresa' ? 'Ej: Juan Pérez' : 'Ej: María López'}
-              />
-            </div>
-            {shouldShowError('nombre') && (
-              <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.nombre.message}</p>
-            )}
-          </div>
+          {/* Campos ocultos para tipo y rol */}
+          <input type="hidden" {...register('tipo')} value={selectedRole === 'empresa' ? '' : selectedRole} />
+          <input 
+            type="hidden" 
+            {...register('rol')} 
+            value={selectedRole} 
+            onChange={(e) => {
+              // Forzar la actualización del valor del rol
+              setValue('rol', selectedRole, { shouldValidate: true });
+            }}
+          />
           
-          <div className="mb-6">
-            <label htmlFor="email" className="block text-sm font-medium mb-2 text-gray-300">Email</label>
-            <div className="relative">
-              <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                id="email"
-                {...register('email')}
-                type="email"
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                  shouldShowError('email') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                }`}
-                placeholder="tucorreo@ejemplo.com"
-              />
-            </div>
-            {shouldShowError('email') && (
-              <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.email.message}</p>
-            )}
-          </div>
-          
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium mb-2 text-gray-300">Contraseña</label>
-            <div className="relative">
-              <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                id="password"
-                {...register('password')}
-                type="password"
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                  shouldShowError('password') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                }`}
-                placeholder="••••••••"
-              />
-            </div>
-            {shouldShowError('password') && (
-              <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.password.message}</p>
-            )}
-          </div>
-
-          {/* Campos específicos para Estudiante */}
+          {/* Renderizar el formulario correspondiente según el rol seleccionado */}
           {selectedRole === 'estudiante' && (
-            <>
-              <input type="hidden" {...register('tipo')} value="estudiante" />
-            </>
+            <StudentForm 
+              register={register} 
+              errors={errors} 
+              touchedFields={touchedFields} 
+              formSubmitted={formSubmitted} 
+              selectedRole={selectedRole} 
+            />
           )}
-          
-          {/* Campos específicos para Egresado */}
+
           {selectedRole === 'egresado' && (
-            <>
-              <input type="hidden" {...register('tipo')} value="egresado" />
-              <div className="mb-6">
-                <label htmlFor="año_egreso" className="block text-sm font-medium mb-2 text-gray-300">
-                  Año de egreso
-                </label>
-                <div className="relative">
-                  <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="año_egreso"
-                    {...register('año_egreso', { valueAsNumber: true })}
-                    type="number"
-                    min="1900"
-                    max={new Date().getFullYear()}
-                    className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                      errors.año_egreso ? 'border-red-500' : 'border-[#38bdf8]/30'
-                    }`}
-                    placeholder="Ej: 2023"
-                  />
-                </div>
-                {errors.año_egreso && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.año_egreso.message}</p>
-                )}
-              </div>
-            </>
+            <AlumniForm 
+              register={register} 
+              errors={errors} 
+              touchedFields={touchedFields} 
+              formSubmitted={formSubmitted} 
+              selectedRole={selectedRole} 
+            />
           )}
 
-          {/* Campos comunes para Estudiante y Egresado */}
-          {(selectedRole === 'estudiante' || selectedRole === 'egresado') && (
-            <>
-              <div className="mb-6">
-                <label htmlFor="carrera" className="block text-sm font-medium mb-2 text-gray-300">Carrera</label>
-                <div className="relative">
-                  <FiBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="carrera"
-                    {...register('carrera')}
-                    className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                      shouldShowError('carrera') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                    }`}
-                    placeholder="Ej: Ingeniería de Sistemas"
-                  />
-                </div>
-                {shouldShowError('carrera') && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.carrera.message}</p>
-                )}
-              </div>
-
-              {tipo === 'egresado' && (
-                <div className="mb-6">
-                  <label htmlFor="año_egreso" className="block text-sm font-medium mb-2 text-gray-300">
-                    Año de egreso
-                  </label>
-                  <div className="relative">
-                    <FiCalendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      id="año_egreso"
-                      {...register('año_egreso', { valueAsNumber: true })}
-                      type="number"
-                      min="1900"
-                      max={new Date().getFullYear()}
-                      className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                        shouldShowError('año_egreso') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                      }`}
-                      placeholder="Ej: 2023"
-                    />
-                  </div>
-                  {shouldShowError('año_egreso') && (
-                    <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.año_egreso.message}</p>
-                  )}
-                </div>
-              )}
-
-              <div className="mb-6">
-                <label htmlFor="telefono" className="block text-sm font-medium mb-2 text-gray-300">
-                  Teléfono (opcional)
-                </label>
-                <div className="relative">
-                  <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="telefono"
-                    {...register('telefono')}
-                    type="tel"
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors border-[#38bdf8]/30"
-                    placeholder="Ej: 999888777"
-                  />
-                </div>
-                {errors.telefono && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.telefono.message}</p>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Campos específicos para Empresa */}
           {selectedRole === 'empresa' && (
-            <>
-              <div className="mb-6">
-                <label htmlFor="nombreEmpresa" className="block text-sm font-medium mb-2 text-gray-300">
-                  Nombre de la empresa
-                </label>
-                <div className="relative">
-                  <FiBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="nombreEmpresa"
-                    {...register('nombreEmpresa')}
-                    className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                      shouldShowError('nombreEmpresa') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                    }`}
-                    placeholder="Ej: Mi Empresa S.A.C."
-                  />
-                </div>
-                {shouldShowError('nombreEmpresa') && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.nombreEmpresa.message}</p>
-                )}
-              </div>
-              
-              <div className="mb-6">
-                <label htmlFor="ruc" className="block text-sm font-medium mb-2 text-gray-300">
-                  RUC
-                </label>
-                <div className="relative">
-                  <FiTag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="ruc"
-                    {...register('ruc')}
-                    className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                      shouldShowError('ruc') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                    }`}
-                    placeholder="Ej: 20123456781"
-                  />
-                </div>
-                {shouldShowError('ruc') && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.ruc.message}</p>
-                )}
-              </div>
-              
-              <div className="mb-6">
-                <label htmlFor="rubro" className="block text-sm font-medium mb-2 text-gray-300">
-                  Rubro de la empresa
-                </label>
-                <div className="relative">
-                  <FiBriefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="rubro"
-                    {...register('rubro')}
-                    className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-[#38bdf8] transition-colors ${
-                      shouldShowError('rubro') ? 'border-red-500' : 'border-[#38bdf8]/30'
-                    }`}
-                    placeholder="Ej: Tecnología"
-                  />
-                </div>
-                {shouldShowError('rubro') && (
-                  <p className="mt-1 text-sm text-red-400 animate-pulse">{errors.rubro.message}</p>
-                )}
-              </div>
-            </>
+            <CompanyForm 
+              register={register} 
+              errors={errors} 
+              touchedFields={touchedFields} 
+              formSubmitted={formSubmitted} 
+              selectedRole={selectedRole} 
+            />
           )}
 
           {submitError && (
@@ -461,7 +400,63 @@ export default function RegisterForm() {
 
           <div className="mt-6">
             <button
-              type="submit"
+              type="button"
+              onClick={async (e) => {
+                console.log('=== INICIO DEL PROCESO DE ENVÍO ===');
+                e.preventDefault();
+                
+                try {
+                  // 1. Obtener valores actuales
+                  const currentValues = getValues();
+                  console.log('1. Valores actuales del formulario:', JSON.stringify(currentValues, null, 2));
+                  
+                  // 2. Forzar validación
+                  console.log('2. Validando formulario...');
+                  const isValid = await trigger(undefined, { shouldFocus: true });
+                  console.log('3. Formulario válido:', isValid);
+                  
+                  if (!isValid) {
+                    // Crear un objeto simple con los mensajes de error
+                    const errorMessages = {};
+                    Object.entries(errors).forEach(([field, error]) => {
+                      if (error) {
+                        errorMessages[field] = error.message || 'Error de validación';
+                        console.error(`Error en campo ${field}:`, error.message || 'Error de validación');
+                      }
+                    });
+                    
+                    console.log('4. Errores de validación:', errorMessages);
+                    console.log('5. Campos tocados:', Object.keys(touchedFields).filter(field => touchedFields[field]));
+                    return;
+                  }
+                  
+                  // 3. Obtener valores después de la validación
+                  const formValues = getValues();
+                  console.log('4. Valores después de validar:', JSON.stringify(formValues, null, 2));
+                  
+                  // 4. Verificar campos requeridos
+                  const requiredFields = ['nombre', 'email', 'password', 'rol'];
+                  const missingFields = requiredFields.filter(field => !formValues[field]);
+                  
+                  if (missingFields.length > 0) {
+                    console.error('5. Campos requeridos faltantes:', missingFields);
+                    return;
+                  }
+                  
+                  // 5. Iniciar envío
+                  console.log('6. Iniciando envío...');
+                  await onSubmit(formValues);
+                  console.log('7. Envío completado');
+                  
+                } catch (error) {
+                  console.error('ERROR EN EL PROCESO DE ENVÍO:', error);
+                  if (error.response) {
+                    console.error('Detalles del error:', error.response.data);
+                  }
+                } finally {
+                  console.log('=== FIN DEL PROCESO DE ENVÍO ===');
+                }
+              }}
               disabled={isSubmitting}
               className={`w-full py-3 px-4 rounded-lg font-semibold shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#38bdf8] focus:ring-opacity-50 mb-4 ${
                 isSubmitting ? 'bg-[#38bdf8]/70 cursor-not-allowed' : 'bg-[#38bdf8] hover:bg-[#0ea5e9] text-[#062056]'
