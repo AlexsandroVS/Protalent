@@ -1,63 +1,98 @@
 'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { AdminAuthProvider, useAdminAuth } from '../context/admin/AdminAuthContext';
-import AdminNavbar from '../components/admin/AdminNavbar';
-import AdminSidebar from '../components/admin/AdminSidebar';
+import { AdminProvider, useAdmin } from './AdminContext';
+import AdminLogin from './AdminLogin';
 
 function AdminLayoutContent({ children }) {
-  const { adminUser, loading, isAdmin } = useAdminAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      router.push('/admin/login');
-    }
-  }, [adminUser, loading, isAdmin, router]);
+  const { adminUser, loading, isAuthenticated } = useAdmin();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white text-lg">Verificando acceso de administrador...</p>
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#f3f4f6'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            border: '4px solid #e5e7eb', 
+            borderTop: '4px solid #3b82f6', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }}></div>
+          <p style={{ color: '#6b7280' }}>Verificando acceso...</p>
         </div>
       </div>
     );
   }
 
-  if (!isAdmin) {
-    return null; // El useEffect ya redirigirá
+  if (!isAuthenticated) {
+    return <AdminLogin />;
   }
 
-  const sidebarWidth = 'w-64';
-  const navHeight = '68px';
-
   return (
-    <div className="min-h-screen flex flex-col bg-gray-900">
-      <AdminNavbar />
-      <div className="flex flex-1">
-        <AdminSidebar />
-        <main 
-          className="flex-1 bg-gray-100 text-gray-800"
-          style={{ 
-            marginLeft: sidebarWidth.includes('w-') ? `${parseInt(sidebarWidth.split('-')[1]) * 0.25}rem` : sidebarWidth,
-            paddingTop: navHeight,
-          }}
-        >
-          <div className="p-6">
-            {children}
-          </div>
-        </main>
-      </div>
+    <div>
+      {/* Header simple */}
+      <header style={{ 
+        backgroundColor: '#1f2937', 
+        color: 'white', 
+        padding: '1rem 2rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold' }}>
+          ProTalent Admin
+        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span>Hola, {adminUser?.nombre}</span>
+          <LogoutButton />
+        </div>
+      </header>
+      
+      {/* Contenido */}
+      <main style={{ padding: '2rem' }}>
+        {children}
+      </main>
     </div>
+  );
+}
+
+function LogoutButton() {
+  const { logout } = useAdmin();
+  
+  return (
+    <button
+      onClick={logout}
+      style={{
+        backgroundColor: '#dc2626',
+        color: 'white',
+        border: 'none',
+        padding: '0.5rem 1rem',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '0.875rem'
+      }}
+    >
+      Cerrar Sesión
+    </button>
   );
 }
 
 export default function AdminLayout({ children }) {
   return (
-    <AdminAuthProvider>
+    <AdminProvider>
       <AdminLayoutContent>{children}</AdminLayoutContent>
-    </AdminAuthProvider>
+      <style jsx global>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </AdminProvider>
   );
-} 
+}
