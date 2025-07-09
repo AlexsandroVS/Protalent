@@ -4,6 +4,7 @@ const router = express.Router();
 const { saludo } = require('../controllers/exampleController');
 
 const authRoutes = require('./auth');
+const adminAuthRoutes = require('./adminAuth');
 const estudianteRoutes = require('./estudiante');
 const empresaRoutes = require('./empresa');
 const ofertaRoutes = require('./oferta');
@@ -17,6 +18,7 @@ const chatRoutes = require('./chat');
 
 router.get('/', saludo);
 router.use('/auth', authRoutes); 
+router.use('/admin/auth', adminAuthRoutes);
 router.use('/estudiantes', estudianteRoutes);
 router.use('/empresas', empresaRoutes);
 router.use('/ofertas', ofertaRoutes);

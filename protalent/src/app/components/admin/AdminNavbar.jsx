@@ -1,28 +1,28 @@
 // Forzando actualización con este comentario - AdminNavbar
 'use client';
 import Image from 'next/image';
-import { useAuth } from '../../context/auth/AuthContext';
+import { useAdminAuth } from '../../context/admin/AdminAuthContext';
 import { FiLogOut } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AdminNavbar() {
-  const { user, logout } = useAuth();
+  const { adminUser, adminLogout } = useAdminAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showUserInfo, setShowUserInfo] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (adminUser) {
       const timer = setTimeout(() => setShowUserInfo(true), 100);
       return () => clearTimeout(timer);
     } else {
       setShowUserInfo(false);
     }
-  }, [user]);
+  }, [adminUser]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    await logout();
+    adminLogout();
   };
 
   if (isLoggingOut) {
@@ -43,11 +43,11 @@ export default function AdminNavbar() {
         </span>
       </div>
       <div className="flex items-center gap-5">
-        {user && (
+        {adminUser && (
           <span
             className={`text-slate-300 text-sm transition-opacity duration-500 ease-in-out ${showUserInfo ? 'opacity-100' : 'opacity-0'}`}
           >
-            Admin: <span className="font-semibold text-sky-400">{user.nombre}</span>
+            Admin: <span className="font-semibold text-sky-400">{adminUser.nombre}</span>
           </span>
         )}
         <button
