@@ -1,4 +1,4 @@
-import { AuthProvider } from '../app/context/auth/AuthContext';
+import { AuthProvider } from './context/auth/AuthContext';
 import './globals.css';
 
 import { ReactNode } from 'react';

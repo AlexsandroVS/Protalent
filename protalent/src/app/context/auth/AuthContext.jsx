@@ -1,15 +1,15 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation'; // Ahora usaremos useRouter
+import { useRouter } from 'next/navigation';
 import api from '../../lib/axios';
-
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter(); // Inicializar useRouter
+  const [error, setError] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     let isMounted = true; // Para evitar actualizaciones de estado en un componente desmontado
@@ -111,20 +111,32 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginWithGoogle = async (idToken) => {
+  const loginWithGoogle = async (credential, rol) => {
     setLoading(true);
     try {
-      const { data } = await api.post('/api/auth/google', { idToken });
-      localStorage.setItem('token', data.token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-      setUser(data.usuario);
-      setLoading(false);
+      if (!credential) {
+        throw new Error('No se pudo obtener el token de Google');
+      }
 
-      if (data.requiereCompletarPerfil) {
-        // Redirigir a una página para completar el perfil, posiblemente pasando el rol o tipo requerido
-        router.push('/auth/complete-profile'); 
+      const { data } = await api.post('/api/auth/google', { 
+        credential,
+        rol: rol || 'estudiante' // Usar el rol proporcionado o 'estudiante' por defecto
+      });
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        setUser(data.usuario);
+        setLoading(false);
+
+        if (data.necesitaCompletarPerfil) {
+          setIncompleteUser(data.usuario);
+          setShowCompleteProfile(true);
+        } else {
+          router.push('/dashboard');
+        }
       } else {
-        router.push('/dashboard');
+        throw new Error('No se recibió un token válido del servidor');
       }
     } catch (error) {
       console.error("[AuthContext] Error en loginWithGoogle:", error.response?.data || error.message);
@@ -136,20 +148,56 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const registerWithGoogle = async (idToken) => {
+  const registerWithGoogle = async ({ credential, rol }) => {
     setLoading(true);
     try {
-      // Asumimos que el endpoint /api/auth/google manejará tanto login como registro
-      const { data } = await api.post('/api/auth/google', { idToken });
-      localStorage.setItem('token', data.token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-      setUser(data.usuario);
-      setLoading(false);
+      if (!credential) {
+        throw new Error('No se pudo obtener el token de Google');
+      }
+      if (!rol) {
+        throw new Error('No se especificó el tipo de cuenta');
+      }
 
-      if (data.requiereCompletarPerfil) {
-        router.push('/auth/complete-profile'); 
+      console.log('Enviando token de Google al backend...', { rol });
+      const { data } = await api.post('/api/auth/google', { 
+        credential,
+        rol
+      }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Respuesta del servidor en registerWithGoogle:', data);
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        
+        // Asegurarnos de que el rol esté presente en el objeto de usuario
+        const userData = data.user || data.usuario;
+        if (userData && !userData.rol && rol) {
+          userData.rol = rol;
+        }
+        
+        console.log('Actualizando estado del usuario con:', userData);
+        setUser(userData);
+        setLoading(false);
+
+        // Verificar si necesita completar el perfil
+        if (data.necesitaCompletarPerfil === true) {
+          console.log('Redirigiendo a la página de completar perfil');
+          // Redirigir a la página de completar perfil
+          router.push('/perfil/completar');
+        } else if (data.redirectTo) {
+          console.log('Redirigiendo a:', data.redirectTo);
+          router.push(data.redirectTo);
+        } else {
+          console.log('Redirigiendo al dashboard por defecto');
+          router.push('/dashboard');
+        }
       } else {
-        router.push('/dashboard');
+        throw new Error('No se recibió un token válido del servidor');
       }
     } catch (error) {
       console.error("[AuthContext] Error en registerWithGoogle:", error.response?.data || error.message);
@@ -158,6 +206,28 @@ export function AuthProvider({ children }) {
       setUser(null);
       setLoading(false);
       throw error;
+    }
+  };
+
+  const handleCompleteProfile = async (userData) => {
+    console.log('handleCompleteProfile llamado con:', userData);
+    try {
+      // Actualizar el estado local
+      setUser(prev => ({
+        ...prev,
+        ...userData,
+        perfilCompleto: true
+      }));
+      
+      // Redirigir al dashboard
+      console.log('Redirigiendo al dashboard después de completar perfil');
+      router.push('/dashboard');
+      
+      // Forzar recarga para asegurar que todo se actualice correctamente
+      router.refresh();
+    } catch (error) {
+      console.error('Error al manejar el perfil completado:', error);
+      throw error; // Propagar el error para manejarlo en el componente
     }
   };
 
@@ -180,8 +250,21 @@ export function AuthProvider({ children }) {
     router.push('/auth/login'); // Forzar recarga de página a login
   };
 
+  console.log('=== Renderizando AuthProvider ===');
+  console.log('user:', user);
+  
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, loginWithGoogle, registerWithGoogle }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      error, 
+      login, 
+      register, 
+      loginWithGoogle, 
+      registerWithGoogle, 
+      logout, 
+      handleCompleteProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   );

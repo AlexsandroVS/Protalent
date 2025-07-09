@@ -281,10 +281,17 @@ export default function RegisterForm() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      await registerWithGoogle(credentialResponse.credential);
+      if (!selectedRole) {
+        throw new Error('Por favor selecciona un tipo de cuenta (estudiante, egresado o empresa)');
+      }
+      
+      await registerWithGoogle({
+        credential: credentialResponse.credential,
+        rol: selectedRole
+      });
     } catch (error) {
       console.error('Error en registro con Google:', error);
-      setSubmitError('Error al registrarse con Google');
+      setSubmitError(error.message || 'Error al registrarse con Google');
     }
   };
 
@@ -476,8 +483,10 @@ export default function RegisterForm() {
 
           <div className="flex justify-center mb-6">
             <GoogleLogin
+              clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
+              cookiePolicy="single_host_origin"
               theme="filled_blue"
               text="signup_with"
               shape="rectangular"

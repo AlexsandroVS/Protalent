@@ -184,14 +184,33 @@ const googleAuth = async (req, res) => {
 
     if (user) {
       // Usuario existente
+      const updateData = {};
+      
+      // Vincular cuenta existente con Google si no está vinculada
       if (!user.googleId) {
-        // Vincular cuenta existente con Google
-        await user.update({ googleId });
+        updateData.googleId = googleId;
+      }
+      
+      // Actualizar nombre si es diferente
+      if (user.nombre !== nombre) {
+        updateData.nombre = nombre;
       }
       
       // Actualizar información si es necesario
-      if (user.nombre !== nombre) {
-        await user.update({ nombre });
+      if (user.rol !== rol) {
+        updateData.rol = rol;
+        // Si el rol cambia, marcamos el perfil como incompleto para que complete la información
+        updateData.perfilCompleto = false;
+      }
+      
+      // Asegurarse de que el nombre de la empresa esté en el formato correcto
+      if (rol === 'empresa' && user.nombre) {
+        updateData.nombreEmpresa = user.nombre;
+      }
+      
+      // Si hay algo que actualizar, lo hacemos en una sola operación
+      if (Object.keys(updateData).length > 0) {
+        await user.update(updateData);
       }
     } else {
       // Nuevo usuario - crear con Google
@@ -246,7 +265,19 @@ const googleAuth = async (req, res) => {
 // Completar perfil de empresa (después de Google Auth)
 const completarPerfilEmpresa = async (req, res) => {
   try {
-    const { ruc, nombre_empresa, rubro, descripcion, direccion, telefono } = req.body;
+    // Aceptar tanto snake_case como camelCase
+    const { 
+      ruc, 
+      nombre_empresa, 
+      nombreEmpresa, 
+      rubro, 
+      descripcion, 
+      direccion, 
+      telefono 
+    } = req.body;
+    
+    // Usar el valor que esté disponible
+    const nombreEmpresaFinal = nombre_empresa || nombreEmpresa;
     const usuarioId = req.user.id;
 
     // Verificar que sea una empresa
@@ -266,11 +297,16 @@ const completarPerfilEmpresa = async (req, res) => {
       return res.status(400).json({ error: 'RUC debe tener 11 dígitos' });
     }
 
+    // Validar que el nombre de la empresa esté presente
+    if (!nombreEmpresaFinal) {
+      return res.status(400).json({ error: 'El nombre de la empresa es obligatorio' });
+    }
+
     // Crear perfil de empresa
     const empresa = await Empresa.create({
       usuarioId,
       ruc,
-      nombre_empresa,
+      nombreEmpresa: nombreEmpresaFinal,
       rubro,
       descripcion,
       direccion,

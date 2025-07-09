@@ -16,6 +16,9 @@ const loginSchema = z.object({
 export default function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
+  const [googleCredential, setGoogleCredential] = useState('');
+  const [selectedRole, setSelectedRole] = useState('estudiante');
   const { login, loginWithGoogle } = useAuth();
 
   const { register, handleSubmit, formState: { errors } } = useForm({
@@ -42,10 +45,27 @@ export default function LoginForm() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     try {
-      await loginWithGoogle(credentialResponse.credential);
+      setGoogleCredential(credentialResponse.credential);
+      setShowRoleSelector(true);
+    } catch (error) {
+      console.error('Error en login con Google:', error);
+      setSubmitError('Error al procesar la autenticación de Google');
+    }
+  };
+
+  const handleRoleSelect = async () => {
+    if (!googleCredential || !selectedRole) {
+      setSubmitError('Por favor selecciona un rol');
+      return;
+    }
+
+    try {
+      await loginWithGoogle(googleCredential, selectedRole);
+      setShowRoleSelector(false);
     } catch (error) {
       console.error('Error en login con Google:', error);
       setSubmitError('Error al iniciar sesión con Google');
+      setShowRoleSelector(false);
     }
   };
 
@@ -118,8 +138,10 @@ export default function LoginForm() {
           </button>
           <div className="flex justify-center mb-6">
             <GoogleLogin
+              clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
+              cookiePolicy="single_host_origin"
               theme="filled_blue"
               text="signin_with"
               shape="rectangular"
@@ -127,6 +149,52 @@ export default function LoginForm() {
               locale="es"
             />
           </div>
+          {isSubmitting && (
+            <div className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Procesando...
+            </div>
+          )}
+          {showRoleSelector && (
+            <div className="mt-6 p-4 bg-white/5 rounded-lg border border-[#38bdf8]/20">
+              <h3 className="text-center text-gray-300 mb-4">Selecciona tu tipo de cuenta</h3>
+              <div className="space-y-3">
+                {['estudiante', 'egresado', 'empresa'].map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setSelectedRole(role)}
+                    className={`w-full py-2 px-4 rounded-lg text-center transition-colors ${
+                      selectedRole === role
+                        ? 'bg-[#38bdf8] text-gray-900 font-medium'
+                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                    }`}
+                  >
+                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowRoleSelector(false)}
+                  className="flex-1 py-2 px-4 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRoleSelect}
+                  className="flex-1 py-2 px-4 bg-[#38bdf8] text-gray-900 font-medium rounded-lg hover:bg-[#38bdf8]/90 transition-colors"
+                >
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
           <div className="mt-6 text-center">
             <p className="text-gray-300">
               ¿No tienes una cuenta?{' '}

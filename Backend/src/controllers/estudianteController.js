@@ -3,9 +3,15 @@ const { Estudiante, Usuario } = require('../models');
 
 // Crear perfil de estudiante
 const crearEstudiante = async (req, res) => {
+  const t = await Estudiante.sequelize.transaction();
+  
   try {
-    const { carrera, año_egreso, telefono, tipo } = req.body;
-    const usuarioId = req.user.id; // Del middleware verifyToken
+    const { carrera, año_egreso, anio_egreso, telefono, tipo, direccion } = req.body;
+    const usuarioId = req.user?.id || req.body.usuarioId; // Del middleware verifyToken o del body
+
+    if (!usuarioId) {
+      return res.status(400).json({ error: 'ID de usuario no proporcionado' });
+    }
 
     // Verificar que el usuario no tenga ya un perfil de estudiante
     const existeEstudiante = await Estudiante.findOne({ where: { usuarioId } });
@@ -13,17 +19,41 @@ const crearEstudiante = async (req, res) => {
       return res.status(400).json({ error: 'Ya existe un perfil de estudiante para este usuario' });
     }
 
+    // Usar año_egreso o anio_egreso, lo que esté disponible
+    const anioEgreso = año_egreso || anio_egreso;
+    
+    if (!anioEgreso) {
+      return res.status(400).json({ error: 'El año de egreso es requerido' });
+    }
+
     const estudiante = await Estudiante.create({
       usuarioId,
       carrera,
-      año_egreso,
+      año_egreso: anioEgreso,
       telefono,
-      tipo
-    });
+      tipo: tipo || 'estudiante', // Valor por defecto
+      direccion: direccion || ''
+    }, { transaction: t });
 
+    // Actualizar el usuario para marcar el perfil como completo
+    const usuario = await Usuario.findByPk(usuarioId, { transaction: t });
+    if (usuario) {
+      usuario.perfilCompleto = true;
+      await usuario.save({ transaction: t });
+    }
+
+    await t.commit();
+    
     res.status(201).json({
-      mensaje: 'Perfil de estudiante creado exitosamente',
-      estudiante
+      mensaje: 'Perfil de estudiante/egresado creado exitosamente',
+      estudiante,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+        perfilCompleto: usuario.perfilCompleto
+      }
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al crear perfil de estudiante', detalle: error.message });
