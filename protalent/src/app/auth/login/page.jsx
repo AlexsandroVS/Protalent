@@ -1,8 +1,9 @@
 'use client';
-import AuthForm from '../../components/auth/AuthForm';
+import LoginForm from '../../components/auth/LoginForm';
 import AuthNavbar from '../../components/views/Navbar';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const DotGrid = dynamic(
   () => import('../../components/ui/DotGrid'),
@@ -30,9 +31,13 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="backdrop-blur-xl bg-white/10 border border-[#38bdf8]/20 shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-xl mx-2"
+          className="w-full max-w-xl mx-2" 
         >
-          <AuthForm type="login" />
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
+            <div className="relative z-10 w-full max-w-md px-4">
+              <LoginForm />
+            </div>
+          </GoogleOAuthProvider>
         </motion.div>
       </main>
     </div>

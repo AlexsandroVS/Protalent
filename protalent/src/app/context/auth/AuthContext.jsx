@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
-// import { useRouter } from 'next/navigation'; // No se usará si window.location.href es la estrategia
+import { useRouter } from 'next/navigation'; // Ahora usaremos useRouter
 import api from '../../lib/axios';
 
 
@@ -9,7 +9,7 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // const router = useRouter(); // No se usará si window.location.href es la estrategia
+  const router = useRouter(); // Inicializar useRouter
 
   useEffect(() => {
     let isMounted = true; // Para evitar actualizaciones de estado en un componente desmontado
@@ -71,7 +71,7 @@ export function AuthProvider({ children }) {
       // O podemos setearlo directamente aquí y luego redirigir
       setUser(data.user); 
       setLoading(false); // Establecer loading false después de un login exitoso y antes de redirigir
-    window.location.href = '/dashboard';
+    router.push('/dashboard'); // Usar router.push en lugar de window.location.href
     } catch (error) {
       console.error("[AuthContext] Error en login:", error.response?.data || error.message);
       localStorage.removeItem('token'); // Limpiar token si el login falla
@@ -87,14 +87,74 @@ export function AuthProvider({ children }) {
     // Por ahora, asumamos que después de registrar, el usuario debe loguearse por separado
     setLoading(true);
     try {
-      await api.post('/api/auth/register', userData);
-      // No se establece usuario ni token, se espera que el usuario haga login
-      setUser(null); 
-      setLoading(false);
-      // podrías redirigir a login o mostrar un mensaje de éxito
-      // window.location.href = '/auth/login?status=registered';
+      const response = await api.post('/api/auth/register', userData);
+      // console.log("[AuthContext] Registro exitoso:", response.data);
+
+      // Si el registro devuelve un token (como en tu documentación), podemos loguear directamente
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        setUser(response.data.usuario);
+        setLoading(false);
+        router.push('/dashboard');
+      } else {
+        // Si no devuelve token, redirigir al login para que el usuario inicie sesión
+        setUser(null); 
+        setLoading(false);
+        router.push('/auth/login?status=registered');
+      }
     } catch (error) {
       console.error("[AuthContext] Error en register:", error.response?.data || error.message);
+      setUser(null);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const loginWithGoogle = async (idToken) => {
+    setLoading(true);
+    try {
+      const { data } = await api.post('/api/auth/google', { idToken });
+      localStorage.setItem('token', data.token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+      setUser(data.usuario);
+      setLoading(false);
+
+      if (data.requiereCompletarPerfil) {
+        // Redirigir a una página para completar el perfil, posiblemente pasando el rol o tipo requerido
+        router.push('/auth/complete-profile'); 
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error("[AuthContext] Error en loginWithGoogle:", error.response?.data || error.message);
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+      setUser(null);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const registerWithGoogle = async (idToken) => {
+    setLoading(true);
+    try {
+      // Asumimos que el endpoint /api/auth/google manejará tanto login como registro
+      const { data } = await api.post('/api/auth/google', { idToken });
+      localStorage.setItem('token', data.token);
+      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+      setUser(data.usuario);
+      setLoading(false);
+
+      if (data.requiereCompletarPerfil) {
+        router.push('/auth/complete-profile'); 
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (error) {
+      console.error("[AuthContext] Error en registerWithGoogle:", error.response?.data || error.message);
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
       setUser(null);
       setLoading(false);
       throw error;
@@ -117,11 +177,11 @@ export function AuthProvider({ children }) {
     setLoading(false); // Asegurar que loading sea false para que AuthNavbar reaccione correctamente
     
     // console.log("[AuthContext] Token eliminado, usuario seteado a null. Redirigiendo...");
-    window.location.href = '/auth/login'; // Forzar recarga de página a login
+    router.push('/auth/login'); // Forzar recarga de página a login
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, loginWithGoogle, registerWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

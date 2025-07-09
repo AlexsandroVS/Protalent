@@ -1,8 +1,9 @@
 'use client';
 import AuthNavbar from '../../components/views/Navbar';
-import AuthForm from '../../components/auth/AuthForm';
+import RegisterForm from '../../components/auth/RegisterForm';
 import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const DotGrid = dynamic(
   () => import('../../components/ui/DotGrid'),
@@ -30,9 +31,13 @@ export default function RegisterPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="backdrop-blur-xl bg-white/10 border border-[#38bdf8]/20 shadow-2xl rounded-3xl p-8 md:p-10 w-full max-w-xl mx-2"
+          className="w-full max-w-xl mx-2" // Se elimina la encapsulación visual
         >
-          <AuthForm type="register" />
+          <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}>
+            <div className="relative z-10 w-full max-w-2xl px-4">
+              <RegisterForm />
+            </div>
+          </GoogleOAuthProvider>
         </motion.div>
       </main>
     </div>

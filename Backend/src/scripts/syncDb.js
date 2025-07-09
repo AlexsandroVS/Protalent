@@ -5,7 +5,8 @@ const { sequelize } = require('../models');
 (async () => {
   try {
     console.log('⏳ Sincronizando modelos con la base de datos...');
-    await sequelize.sync({ force: true }); // ¡CUIDADO! Esto elimina y recrea todas las tablas
+    // Cambiado de force: true a alter: true para evitar la pérdida de datos
+    await sequelize.sync({ alter: true }); 
     console.log('✅ Modelos sincronizados correctamente.');
     process.exit(0);
   } catch (error) {

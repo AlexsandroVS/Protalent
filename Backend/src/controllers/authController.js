@@ -48,7 +48,7 @@ const register = async (req, res) => {
       perfil = await Empresa.create({
         usuarioId: user.id,
         ruc,
-        nombre_empresa,
+        nombreEmpresa: nombre_empresa, // <-- mapear correctamente el campo
         rubro,
       });
     }
