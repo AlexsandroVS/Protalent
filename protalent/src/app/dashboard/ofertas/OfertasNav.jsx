@@ -3,24 +3,29 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
-  { href: '/dashboard/ofertas', label: 'Ver Ofertas' },
-  { href: '/dashboard/ofertas/crear', label: 'Crear Oferta' },
+  { href: '/dashboard/ofertas', label: 'Ver Ofertas', icon: '👀' },
+  { href: '/dashboard/ofertas/crear', label: 'Crear Oferta', icon: '➕' },
 ];
 
 export default function OfertasNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-wrap gap-2 mb-8">
+    <nav className="flex flex-wrap gap-4 mb-8">
       {navItems.map(item => (
         <Link
           key={item.href}
           href={item.href}
-          className={`px-5 py-2 rounded-lg font-medium transition-colors shadow-sm
+          className={`
+            flex items-center gap-2 px-6 py-3 rounded-full 
+            font-semibold transition-all duration-300 
+            transform hover:scale-105 shadow-lg
             ${pathname === item.href
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'}
+              ? 'bg-[#38bdf8] text-[#062056] hover:bg-[#0ea5e9]'
+              : 'bg-white/10 text-white/80 backdrop-blur-lg border border-white/20 hover:bg-white/20'
+            }
           `}
         >
+          <span className="text-xl">{item.icon}</span>
           {item.label}
         </Link>
       ))}

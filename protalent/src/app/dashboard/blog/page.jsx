@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { FiPlus } from 'react-icons/fi';
+import { FiPlus, FiRefreshCw } from 'react-icons/fi';
 import api from '../../../app/lib/api';
 import PostCard from '../../../app/components/blog/PostCard';
 import CategoryFilter from '../../../app/components/blog/CategoryFilter';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'react-hot-toast';
 
 export default function BlogPage() {
   const [posts, setPosts] = useState([]);
@@ -17,11 +18,11 @@ export default function BlogPage() {
   const [error, setError] = useState('');
   const [comentariosAbiertos, setComentariosAbiertos] = useState({});
   const [nuevosComentarios, setNuevosComentarios] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       try {
-        // Obtener publicaciones con sus relaciones
+      setLoading(true);
         const [postsResponse, categoriasResponse] = await Promise.all([
           api.get('/api/posts?include=autor,categoria,comentarios'),
           api.get('/api/categorias')
@@ -29,54 +30,79 @@ export default function BlogPage() {
         
         setPosts(postsResponse.data);
         setCategorias(categoriasResponse.data);
+      setError('');
       } catch (err) {
         console.error('Error al cargar datos:', err);
         setError('Error al cargar el blog. Por favor, inténtalo de nuevo más tarde.');
+      toast.error('Error al cargar el blog');
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar esta publicación?')) {
       try {
         await api.delete(`/api/posts/${id}`);
         setPosts(posts.filter(post => post.id !== id));
+        toast.success('Publicación eliminada exitosamente');
       } catch (err) {
         console.error('Error al eliminar:', err);
-        setError('No se pudo eliminar la publicación');
+        toast.error('No se pudo eliminar la publicación');
       }
     }
   };
 
-  const toggleComentarios = (postId) => {
+  const toggleComentarios = useCallback((postId) => {
     setComentariosAbiertos(prev => ({
       ...prev,
       [postId]: !prev[postId]
     }));
-  };
+  }, []);
 
-  const handleNuevoComentario = (postId, e) => {
+  const handleNuevoComentario = async (postId, e) => {
     e.preventDefault();
     const contenido = nuevosComentarios[postId]?.trim();
     if (!contenido) return;
 
-    // Aquí iría la lógica para enviar el comentario
-    console.log('Nuevo comentario para el post', postId, ':', contenido);
-    
-    // Limpiar el campo de comentario
+    try {
+      const response = await api.post(`/api/posts/${postId}/comentarios`, {
+        contenido
+      });
+      
+      setPosts(posts.map(post => 
+        post.id === postId 
+          ? { ...post, comentarios: [...post.comentarios, response.data] }
+          : post
+      ));
+      
     setNuevosComentarios(prev => ({
       ...prev,
       [postId]: ''
     }));
+      
+      toast.success('Comentario agregado exitosamente');
+    } catch (err) {
+      console.error('Error al agregar comentario:', err);
+      toast.error('No se pudo agregar el comentario');
+    }
   };
 
-  const postsFiltrados = categoriaSeleccionada === 'todas' 
-    ? posts 
-    : posts.filter(post => post.categoria?.nombre === categoriaSeleccionada);
+  const postsFiltrados = useMemo(() => {
+    return posts
+      .filter(post => 
+        categoriaSeleccionada === 'todas' || post.categoria?.nombre === categoriaSeleccionada
+      )
+      .filter(post =>
+        searchTerm === '' ||
+        post.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.contenido.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+  }, [posts, categoriaSeleccionada, searchTerm]);
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -94,13 +120,12 @@ export default function BlogPage() {
             </svg>
           </div>
           <div className="ml-3">
-            <p className="text-sm text-red-700">
-              {error}
-            </p>
+            <p className="text-sm text-red-700">{error}</p>
             <button 
-              onClick={() => window.location.reload()} 
-              className="mt-2 text-sm text-indigo-600 hover:text-indigo-500"
+              onClick={fetchData}
+              className="mt-2 text-sm text-indigo-600 hover:text-indigo-500 flex items-center"
             >
+              <FiRefreshCw className="mr-2" />
               Reintentar
             </button>
           </div>
@@ -110,34 +135,41 @@ export default function BlogPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-900">Blog</h1>
+    <div className="min-h-screen bg-gray-50 pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Blog</h1>
+              <p className="text-gray-600">Publicaciones y artículos del blog</p>
+            </div>
             <Link
-              href="/dashboard/blog/nuevo"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              href="/dashboard/blog/crear"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 w-full sm:w-auto justify-center"
             >
               <FiPlus className="-ml-1 mr-2 h-5 w-5" />
               Nueva publicación
             </Link>
           </div>
-        </div>
-      </header>
-
-      {/* Filtros */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-8">
+          
+          <div className="mb-8 space-y-4">
           <CategoryFilter 
             categories={categorias}
             selectedCategory={categoriaSeleccionada}
             onSelectCategory={setCategoriaSeleccionada}
           />
+          
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Buscar publicaciones..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
         </div>
 
-        {/* Lista de publicaciones */}
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {postsFiltrados.length > 0 ? (
             postsFiltrados.map((post) => (
@@ -146,6 +178,13 @@ export default function BlogPage() {
                 post={post}
                 onDelete={handleDelete}
                 showActions={true}
+                onToggleComments={toggleComentarios}
+                isCommentsOpen={comentariosAbiertos[post.id]}
+                onNewComment={handleNuevoComentario}
+                newComment={nuevosComentarios[post.id]}
+                onNewCommentChange={(value) => 
+                  setNuevosComentarios(prev => ({ ...prev, [post.id]: value }))
+                }
               />
             ))
           ) : (
@@ -168,14 +207,16 @@ export default function BlogPage() {
                 No hay publicaciones
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {categoriaSeleccionada === 'todas'
+                {searchTerm 
+                  ? 'No se encontraron publicaciones que coincidan con tu búsqueda.'
+                  : categoriaSeleccionada === 'todas'
                   ? 'Aún no hay publicaciones en el blog.'
                   : `No hay publicaciones en la categoría "${categoriaSeleccionada}".`}
               </p>
               <div className="mt-6">
                 <Link
-                  href="/dashboard/blog/nuevo"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  href="/dashboard/blog/crear"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                 >
                   <FiPlus className="-ml-1 mr-2 h-5 w-5" />
                   Crear publicación
@@ -183,6 +224,7 @@ export default function BlogPage() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

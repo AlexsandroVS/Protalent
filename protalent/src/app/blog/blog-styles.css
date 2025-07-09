@@ -1,0 +1,235 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50;
+}
+
+.blog-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto p-6;
+}
+
+.blog-sidebar {
+  @apply md:col-span-1;
+}
+
+.blog-main-content {
+  @apply md:col-span-2 space-y-6;
+}
+
+.blog-card {
+  @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300;
+}
+
+.blog-card-header {
+  @apply flex items-center space-x-4 p-4 border-b border-gray-100;
+}
+
+.blog-card-body {
+  @apply p-4 space-y-4;
+}
+
+.blog-card-footer {
+  @apply border-t border-gray-100 p-4;
+}
+
+/* Animaciones suaves */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Line clamping for text */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+}
+
+/* Animation for buttons */
+.btn-animate {
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-animate:hover {
+  transform: translateY(-1px);
+}
+
+/* Custom focus styles */
+.focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Custom transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-colors {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom shadow for cards */
+.shadow-custom {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.shadow-custom-hover:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Custom gradient text */
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Custom utility classes */
+.absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Custom form elements */
+.input-custom {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors;
+}
+
+.btn-primary {
+  @apply bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-white text-gray-700 px-4 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors;
+}
+
+/* Custom card styles */
+.card {
+  @apply bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300;
+}
+
+.card-header {
+  @apply px-6 py-4 border-b border-gray-100;
+}
+
+.card-body {
+  @apply p-6;
+}
+
+.card-footer {
+  @apply px-6 py-4 border-t border-gray-100 bg-gray-50;
+}
+
+/* Custom avatar styles */
+.avatar {
+  @apply rounded-full overflow-hidden bg-gray-200 flex items-center justify-center;
+}
+
+.avatar-sm {
+  @apply h-8 w-8;
+}
+
+.avatar-md {
+  @apply h-10 w-10;
+}
+
+.avatar-lg {
+  @apply h-12 w-12;
+}
+
+/* Custom badge styles */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-primary {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Custom tab styles */
+.tab-active {
+  @apply border-blue-500 text-blue-600 border-b-2 font-medium;
+}
+
+/* Custom tooltip */
+.tooltip {
+  @apply invisible absolute z-50 p-2 text-xs text-white bg-gray-900 rounded-md opacity-0 transition-opacity duration-200;
+}
+
+.has-tooltip:hover .tooltip {
+  @apply visible opacity-100;
+}
+
+/* Custom loading spinner */
+.spinner {
+  @apply animate-spin rounded-full border-t-2 border-b-2 border-blue-500;
+}
+
+/* Custom overlay */
+.overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center;
+}
