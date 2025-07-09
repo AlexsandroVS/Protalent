@@ -71,7 +71,13 @@ export function AuthProvider({ children }) {
       // O podemos setearlo directamente aquí y luego redirigir
       setUser(data.user); 
       setLoading(false); // Establecer loading false después de un login exitoso y antes de redirigir
-    router.push('/dashboard'); // Usar router.push en lugar de window.location.href
+      
+      // Redirigir según el rol del usuario
+      if (data.user.rol === 'empresa') {
+        router.push('/empresas/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
       console.error("[AuthContext] Error en login:", error.response?.data || error.message);
       localStorage.removeItem('token'); // Limpiar token si el login falla
@@ -96,7 +102,13 @@ export function AuthProvider({ children }) {
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         setUser(response.data.usuario);
         setLoading(false);
-        router.push('/dashboard');
+        
+        // Redirigir según el rol del usuario
+        if (response.data.usuario.rol === 'empresa') {
+          router.push('/empresas/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         // Si no devuelve token, redirigir al login para que el usuario inicie sesión
         setUser(null); 
@@ -133,7 +145,12 @@ export function AuthProvider({ children }) {
           setIncompleteUser(data.usuario);
           setShowCompleteProfile(true);
         } else {
-          router.push('/dashboard');
+          // Redirigir según el rol del usuario
+          if (data.usuario.rol === 'empresa') {
+            router.push('/empresas/dashboard');
+          } else {
+            router.push('/dashboard');
+          }
         }
       } else {
         throw new Error('No se recibió un token válido del servidor');
@@ -193,8 +210,13 @@ export function AuthProvider({ children }) {
           console.log('Redirigiendo a:', data.redirectTo);
           router.push(data.redirectTo);
         } else {
-          console.log('Redirigiendo al dashboard por defecto');
-          router.push('/dashboard');
+          console.log('Redirigiendo según el rol del usuario');
+          // Redirigir según el rol del usuario
+          if (userData.rol === 'empresa') {
+            router.push('/empresas/dashboard');
+          } else {
+            router.push('/dashboard');
+          }
         }
       } else {
         throw new Error('No se recibió un token válido del servidor');
@@ -219,9 +241,13 @@ export function AuthProvider({ children }) {
         perfilCompleto: true
       }));
       
-      // Redirigir al dashboard
-      console.log('Redirigiendo al dashboard después de completar perfil');
-      router.push('/dashboard');
+      // Redirigir según el rol del usuario
+      console.log('Redirigiendo después de completar perfil');
+      if (userData.rol === 'empresa') {
+        router.push('/empresas/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
       
       // Forzar recarga para asegurar que todo se actualice correctamente
       router.refresh();

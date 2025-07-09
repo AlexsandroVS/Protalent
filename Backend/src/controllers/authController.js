@@ -53,13 +53,18 @@ const register = async (req, res) => {
       });
     }
 
+    // Generar token para el usuario registrado
+    const token = generateToken({ id: user.id, rol: user.rol });
+
     res.status(201).json({ 
       mensaje: 'Usuario registrado con éxito', 
-      user: {
+      token,
+      usuario: {
         id: user.id,
         nombre: user.nombre,
         email: user.email,
         rol: user.rol,
+        perfilCompleto: true // Si llegó hasta aquí, el perfil está completo
       },
       perfil
     });
@@ -79,6 +84,20 @@ const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Contraseña incorrecta' });
 
+    // Verificar si tiene perfil específico completo
+    let perfilEspecifico = null;
+    if (user.rol === 'empresa') {
+      perfilEspecifico = await Empresa.findOne({ where: { usuarioId: user.id } });
+    } else if (user.rol === 'estudiante' || user.rol === 'egresado') {
+      perfilEspecifico = await Estudiante.findOne({ where: { usuarioId: user.id } });
+    }
+
+    // Actualizar perfilCompleto si es necesario
+    const tienePerfilCompleto = !!perfilEspecifico;
+    if (user.perfilCompleto !== tienePerfilCompleto) {
+      await user.update({ perfilCompleto: tienePerfilCompleto });
+    }
+
     const token = generateToken({ id: user.id, rol: user.rol });
 
     res.json({
@@ -89,6 +108,7 @@ const login = async (req, res) => {
         nombre: user.nombre,
         email: user.email,
         rol: user.rol,
+        perfilCompleto: tienePerfilCompleto,
       },
     });
   } catch (err) {
