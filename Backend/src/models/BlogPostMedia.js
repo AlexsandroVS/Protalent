@@ -6,7 +6,8 @@ module.exports = (sequelize) => {
     blogPostId: { type: DataTypes.INTEGER, allowNull: false },
     ruta: { type: DataTypes.STRING, allowNull: false },
     tipo: { type: DataTypes.STRING, allowNull: false }, // imagen, video, etc.
-    tamano: { type: DataTypes.INTEGER, allowNull: false },
+    publicId: { type: DataTypes.STRING, allowNull: true }, // ID de Cloudinary para eliminar
+    tamano: { type: DataTypes.INTEGER, allowNull: true },
     createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
     updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
   });

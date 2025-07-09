@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import adminApi from './adminApi';
 
 const AdminContext = createContext();
@@ -7,6 +8,7 @@ const AdminContext = createContext();
 export function AdminProvider({ children }) {
   const [adminUser, setAdminUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const checkAdminAuth = async () => {
@@ -67,6 +69,7 @@ export function AdminProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('adminToken');
     setAdminUser(null);
+    router.push('/admin/login');
   };
 
   const isAuthenticated = () => {

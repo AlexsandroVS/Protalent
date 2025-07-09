@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useAdmin } from './AdminContext';
+import { useAdmin } from '../AdminContext';
+import { useRouter } from 'next/navigation';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ export default function AdminLogin() {
   const [error, setError] = useState('');
 
   const { login } = useAdmin();
+  const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +19,10 @@ export default function AdminLogin() {
 
     const result = await login(email, password);
 
-    if (!result.success) {
+    if (result.success) {
+      // Redirigir al dashboard admin
+      router.push('/admin');
+    } else {
       setError(result.error);
     }
 
