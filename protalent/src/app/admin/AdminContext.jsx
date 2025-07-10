@@ -17,7 +17,7 @@ export function AdminProvider({ children }) {
       if (adminToken && adminToken !== 'null' && adminToken !== 'undefined') {
         try {
           // Verificar token con la API real
-          const { data } = await adminApi.get('/api/admin/auth/verify');
+          const { data } = await adminApi.get('/admin/auth/verify');
           
           if (data.user && data.user.rol === 'admin') {
             setAdminUser(data.user);
@@ -44,7 +44,7 @@ export function AdminProvider({ children }) {
   const login = async (email, password) => {
     try {
       // Llamar a la API real de admin login
-      const { data } = await adminApi.post('/api/admin/auth/login', { 
+      const { data } = await adminApi.post('/admin/auth/login', { 
         email, 
         password 
       });
