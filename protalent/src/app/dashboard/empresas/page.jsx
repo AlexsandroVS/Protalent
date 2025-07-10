@@ -21,7 +21,7 @@ export default function EmpresasPage() {
 
   const fetchEmpresas = async () => {
     try {
-      const response = await fetch('http://44.200.34.6:5000/api/empresas');
+      const response = await fetch('http://localhost:5000/api/empresas');
       if (!response.ok) throw new Error('Error al cargar las empresas');
       const data = await response.json();
       setEmpresas(data);
@@ -36,7 +36,7 @@ export default function EmpresasPage() {
   const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta empresa?')) {
       try {
-        const response = await fetch(`http://44.200.34.6:5000/api/empresas/${id}`, {
+        const response = await fetch(`http://localhost:5000/api/empresas/${id}`, {
           method: 'DELETE',
         });
         

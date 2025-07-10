@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const API_URL = 'http://44.200.34.6:5000/api';
+const API_URL = 'http://localhost:5000/api';
 
 export async function GET() {
   try {
