@@ -27,11 +27,6 @@ export default function AdminSidebar() {
       icon: '💼'
     },
     {
-      title: 'Postulaciones',
-      href: '/admin/postulaciones',
-      icon: '📝'
-    },
-    {
       title: 'Categorías',
       href: '/admin/categorias',
       icon: '🏷️'
