@@ -15,9 +15,11 @@ router.get('/:id/media', blogPostController.obtenerMedia);
 // Reacciones
 router.post('/:id/reaccion', verifyToken, blogPostController.reaccionar);
 router.get('/:id/reacciones', blogPostController.obtenerReacciones);
+router.get('/:postId/reactions', blogPostController.obtenerReaccionesPost); // NUEVO ENDPOINT
 
 // Públicas
 router.get('/', blogPostController.obtenerPosts);
+router.get('/categoria/:categoriaId', blogPostController.obtenerPostsPorCategoria); // NUEVO ENDPOINT
 router.get('/:id', blogPostController.obtenerPostPorId);
 
 module.exports = router;

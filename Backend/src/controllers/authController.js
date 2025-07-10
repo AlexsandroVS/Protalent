@@ -394,6 +394,97 @@ const verificarEstadoPerfil = async (req, res) => {
   }
 };
 
+// Obtener usuarios públicos (para mostrar en blog) - NUEVO ENDPOINT
+const obtenerUsuariosPublicos = async (req, res) => {
+  try {
+    const { limit = 10, offset = 0, search = '' } = req.query;
+    
+    console.log(`Obteniendo usuarios públicos: limit=${limit}, offset=${offset}, search='${search}'`);
+    
+    // Construir condiciones de búsqueda
+    const whereConditions = {
+      rol: { [Op.ne]: 'admin' } // Excluir administradores
+    };
+    
+    // Si hay término de búsqueda, agregar filtro por nombre o email
+    if (search && search.trim()) {
+      whereConditions[Op.or] = [
+        { nombre: { [Op.like]: `%${search.trim()}%` } },
+        { email: { [Op.like]: `%${search.trim()}%` } }
+      ];
+    }
+    
+    // Primero intentamos sin includes para ver si funciona
+    const usuarios = await Usuario.findAndCountAll({
+      where: whereConditions,
+      attributes: ['id', 'nombre', 'email', 'rol', 'perfilCompleto', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+    
+    console.log(`Encontrados ${usuarios.count} usuarios públicos`);
+    
+    res.json({
+      usuarios: usuarios.rows,
+      total: usuarios.count,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      hasMore: (parseInt(offset) + parseInt(limit)) < usuarios.count
+    });
+    
+  } catch (error) {
+    console.error('Error en obtenerUsuariosPublicos:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor al obtener usuarios',
+      detalle: error.message
+    });
+  }
+};
+
+// Buscar usuarios - NUEVO ENDPOINT
+const buscarUsuarios = async (req, res) => {
+  try {
+    const { q: search, limit = 20 } = req.query;
+    
+    if (!search || search.trim().length < 2) {
+      return res.status(400).json({ 
+        error: 'El término de búsqueda debe tener al menos 2 caracteres' 
+      });
+    }
+    
+    console.log(`Buscando usuarios con término: '${search}'`);
+    
+    const usuarios = await Usuario.findAll({
+      where: {
+        rol: { [Op.ne]: 'admin' }, // Excluir administradores
+        [Op.or]: [
+          { nombre: { [Op.like]: `%${search.trim()}%` } },
+          { email: { [Op.like]: `%${search.trim()}%` } }
+        ]
+      },
+      attributes: ['id', 'nombre', 'email', 'rol', 'createdAt'],
+      order: [['nombre', 'ASC']],
+      limit: parseInt(limit)
+    });
+    
+    console.log(`Encontrados ${usuarios.length} usuarios en búsqueda`);
+    
+    res.json({
+      usuarios: usuarios,
+      total: usuarios.length,
+      searchTerm: search.trim()
+    });
+    
+  } catch (error) {
+    console.error('Error en buscarUsuarios:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor al buscar usuarios',
+      detalle: error.message
+    });
+  }
+};
+
 module.exports = { 
     register, 
     login,
@@ -402,4 +493,6 @@ module.exports = {
     googleAuth,
     completarPerfilEmpresa,
     verificarEstadoPerfil,
+    obtenerUsuariosPublicos,
+    buscarUsuarios
 };

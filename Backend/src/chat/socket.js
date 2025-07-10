@@ -34,10 +34,67 @@ function socketModule(server) {
   });
 
   io.on('connection', (socket) => {
+    console.log(`Usuario conectado: ${socket.user.id}`);
+    
     // Unirse a una sala por su userId
     socket.join(socket.user.id.toString());
 
-    // Enviar mensaje
+    // Unirse a una sala de chat específica
+    socket.on('join-chat', (data) => {
+      const { roomId, userId, targetUserId } = data;
+      console.log(`Usuario ${userId} se unió a la sala ${roomId}`);
+      socket.join(roomId);
+    });
+
+    // Enviar mensaje en el nuevo formato
+    socket.on('send-message', (messageData) => {
+      const { content, senderId, senderName, targetId } = messageData;
+      const roomId = [senderId, targetId].sort().join('-');
+      
+      console.log(`Mensaje de ${senderName} en sala ${roomId}: ${content}`);
+      
+      // Emitir a la sala específica (esto llegará a ambos usuarios si están en el chat)
+      socket.to(roomId).emit('receive-message', messageData);
+      
+      // Verificar si el usuario objetivo está actualmente en la sala de chat
+      const roomSockets = io.sockets.adapter.rooms.get(roomId);
+      let targetInRoom = false;
+      
+      if (roomSockets) {
+        for (const socketId of roomSockets) {
+          const targetSocket = io.sockets.sockets.get(socketId);
+          if (targetSocket && targetSocket.user.id.toString() === targetId.toString()) {
+            targetInRoom = true;
+            break;
+          }
+        }
+      }
+      
+      // Si el usuario objetivo NO está en la sala del chat, enviar notificación
+      if (!targetInRoom) {
+        console.log(`Usuario ${targetId} no está en la sala ${roomId}, enviando notificación`);
+        io.to(targetId.toString()).emit('chat-notification', {
+          ...messageData,
+          type: 'message'
+        });
+      }
+      
+      console.log(`Mensaje enviado a sala ${roomId}`);
+    });
+
+    // Indicador de escritura
+    socket.on('typing', (data) => {
+      const { roomId, userId } = data;
+      socket.to(roomId).emit('user-typing', { userId });
+    });
+
+    // Parar indicador de escritura
+    socket.on('stop-typing', (data) => {
+      const { roomId, userId } = data;
+      socket.to(roomId).emit('user-stopped-typing', { userId });
+    });
+
+    // Enviar mensaje (funcionalidad existente para retrocompatibilidad)
     socket.on('send_message', async (data) => {
       const { to, text } = data;
       const from = socket.user.id;
@@ -73,6 +130,11 @@ function socketModule(server) {
       io.to(to.toString()).emit('receive_message', { ...message, chatId: chat._id });
       // Emitir al emisor para confirmación
       socket.emit('message_sent', { ...message, chatId: chat._id });
+    });
+
+    // Manejar desconexión
+    socket.on('disconnect', () => {
+      console.log(`Usuario desconectado: ${socket.user.id}`);
     });
   });
 
