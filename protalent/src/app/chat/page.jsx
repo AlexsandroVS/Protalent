@@ -43,7 +43,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!user || !targetUserId) return;
 
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io('http://44.200.34.6:5000', {
       auth: {
         token: localStorage.getItem('token')
       }
